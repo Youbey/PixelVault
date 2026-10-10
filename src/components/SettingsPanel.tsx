@@ -22,8 +22,15 @@ const PRESETS = [
   { label: 'Email (<1MB)', width: 800, height: null },
 ];
 
-export function SettingsPanel({ settings, onSettingsChange, originalDimensions }: SettingsPanelProps) {
-  const updateSetting = <K extends keyof ConversionSettings>(key: K, value: ConversionSettings[K]) => {
+export function SettingsPanel({
+  settings,
+  onSettingsChange,
+  originalDimensions,
+}: SettingsPanelProps) {
+  const updateSetting = <K extends keyof ConversionSettings>(
+    key: K,
+    value: ConversionSettings[K]
+  ) => {
     onSettingsChange({ ...settings, [key]: value });
   };
 
@@ -66,7 +73,9 @@ export function SettingsPanel({ settings, onSettingsChange, originalDimensions }
 
       {/* Format Selection */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Output Format</label>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Output Format
+        </label>
         <div className="grid grid-cols-3 gap-2">
           {FORMAT_OPTIONS.map((opt) => (
             <button
@@ -157,7 +166,9 @@ export function SettingsPanel({ settings, onSettingsChange, originalDimensions }
 
       {/* Presets */}
       <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">Quick Presets</label>
+        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+          Quick Presets
+        </label>
         <div className="grid grid-cols-2 gap-1.5">
           {PRESETS.map((preset) => (
             <button

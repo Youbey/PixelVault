@@ -73,11 +73,7 @@ export function DropZone({ onFilesSelected }: DropZoneProps) {
         <div
           className={`
             w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300
-            ${
-              isDragOver
-                ? 'bg-violet-100 dark:bg-violet-800/50'
-                : 'bg-gray-100 dark:bg-gray-800'
-            }
+            ${isDragOver ? 'bg-violet-100 dark:bg-violet-800/50' : 'bg-gray-100 dark:bg-gray-800'}
           `}
         >
           {isDragOver ? (
@@ -104,14 +100,24 @@ export function DropZone({ onFilesSelected }: DropZoneProps) {
           <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
           <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+              />
             </svg>
             <span>No uploads</span>
           </div>
           <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
           <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M13 10V3L4 14h7v7l9-11h-7z"
+              />
             </svg>
             <span>Instant results</span>
           </div>

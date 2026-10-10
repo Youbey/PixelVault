@@ -80,10 +80,7 @@ export function ComparisonSlider({
       />
 
       {/* Before image (clipped) */}
-      <div
-        className="absolute inset-0 overflow-hidden"
-        style={{ width: `${sliderPosition}%` }}
-      >
+      <div className="absolute inset-0 overflow-hidden" style={{ width: `${sliderPosition}%` }}>
         <img
           src={beforeSrc}
           alt="Before"
@@ -105,8 +102,20 @@ export function ComparisonSlider({
           onTouchStart={handleMouseDown}
         >
           <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
-            <path d="M7 4L3 10L7 16" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M13 4L17 10L13 16" stroke="#7c3aed" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+            <path
+              d="M7 4L3 10L7 16"
+              stroke="#7c3aed"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+            <path
+              d="M13 4L17 10L13 16"
+              stroke="#7c3aed"
+              strokeWidth="2.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
         </div>
       </div>

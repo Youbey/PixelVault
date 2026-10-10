@@ -16,14 +16,18 @@ export function Header({ darkMode, onToggleDarkMode }: HeaderProps) {
             </div>
             <div>
               <h1 className="text-lg font-bold text-gray-900 dark:text-white">PixelVault</h1>
-              <p className="text-xs text-gray-500 dark:text-gray-400 -mt-0.5">Privacy-First Media Converter</p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 -mt-0.5">
+                Privacy-First Media Converter
+              </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 dark:bg-emerald-900/30 border border-emerald-200 dark:border-emerald-800">
               <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">100% Local Processing</span>
+              <span className="text-xs font-medium text-emerald-700 dark:text-emerald-400">
+                100% Local Processing
+              </span>
             </div>
 
             <button

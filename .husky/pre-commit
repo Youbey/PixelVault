@@ -1,0 +1,9 @@
+# PixelVault pre-commit hook (Husky).
+# Prefers host Node; falls back to a throwaway Podman container so
+# contributors (and this laptop) don't need Node installed locally.
+if command -v node >/dev/null 2>&1; then
+  npx lint-staged
+else
+  echo "node not found on host - running lint-staged in throwaway Podman..."
+  podman run --rm -v ./:/app:z -w /app docker.io/node:22-alpine sh -c "apk add --no-cache git >/dev/null 2>&1; git config --global --add safe.directory /app; npx lint-staged"
+fi

@@ -28,11 +28,7 @@ export function BatchList({ files, onRemove, onDownload }: BatchListProps) {
           >
             {/* Thumbnail */}
             <div className="w-12 h-12 rounded-lg overflow-hidden bg-gray-200 dark:bg-gray-700 flex-shrink-0">
-              <img
-                src={file.preview}
-                alt={file.name}
-                className="w-full h-full object-cover"
-              />
+              <img src={file.preview} alt={file.name} className="w-full h-full object-cover" />
             </div>
 
             {/* Info */}
@@ -72,9 +68,7 @@ export function BatchList({ files, onRemove, onDownload }: BatchListProps) {
                   <Download className="w-4 h-4" />
                 </button>
               )}
-              {file.status === 'error' && (
-                <AlertCircle className="w-5 h-5 text-red-500" />
-              )}
+              {file.status === 'error' && <AlertCircle className="w-5 h-5 text-red-500" />}
               <button
                 onClick={() => onRemove(file.id)}
                 className="p-1.5 rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 text-gray-400 hover:text-red-500 transition-colors opacity-0 group-hover:opacity-100"
