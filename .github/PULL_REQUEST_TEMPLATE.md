@@ -8,6 +8,11 @@ podman run --rm -it -p 3000:3000 -v ./:/app:z -w /app docker.io/node:22-alpine s
 
 ## Checklist
 
+- [ ] Branch named `feat/*`, `fix/*`, or `chore/*` off `main`
+- [ ] Commits follow Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`, `ci:`)
+- [ ] Pre-commit hooks pass (`npx lint-staged`, commitlint)
+- [ ] `npm run format:check` passes
+- [ ] `npm run lint` passes
 - [ ] `npm run typecheck` passes
 - [ ] `npm run build` passes
 - [ ] No network uploads / tracking added

@@ -1,6 +1,17 @@
 import { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Download, DownloadCloud, Trash2, Zap, Shield, Eye, Lock, Cpu, ArrowRight, Check } from 'lucide-react';
+import {
+  Download,
+  DownloadCloud,
+  Trash2,
+  Zap,
+  Shield,
+  Eye,
+  Lock,
+  Cpu,
+  ArrowRight,
+  Check,
+} from 'lucide-react';
 import { Header } from './components/Header';
 import { DropZone } from './components/DropZone';
 import { SettingsPanel } from './components/SettingsPanel';
@@ -17,10 +28,14 @@ function formatSize(bytes: number): string {
 
 function getExtension(format: string): string {
   switch (format) {
-    case 'image/jpeg': return '.jpg';
-    case 'image/png': return '.png';
-    case 'image/webp': return '.webp';
-    default: return '.png';
+    case 'image/jpeg':
+      return '.jpg';
+    case 'image/png':
+      return '.png';
+    case 'image/webp':
+      return '.webp';
+    default:
+      return '.png';
   }
 }
 
@@ -33,7 +48,10 @@ export default function App() {
   });
   const [files, setFiles] = useState<ImageFile[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
-  const [originalDimensions, setOriginalDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [originalDimensions, setOriginalDimensions] = useState<{
+    width: number;
+    height: number;
+  } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showComparison, setShowComparison] = useState(false);
 
@@ -83,41 +101,49 @@ export default function App() {
     [selectedFileId, getImageDimensions]
   );
 
-  const handleRemoveFile = useCallback((id: string) => {
-    setFiles((prev) => {
-      const file = prev.find((f) => f.id === id);
-      if (file) {
-        URL.revokeObjectURL(file.preview);
-        if (file.processedPreview) {
-          URL.revokeObjectURL(file.processedPreview);
+  const handleRemoveFile = useCallback(
+    (id: string) => {
+      setFiles((prev) => {
+        const file = prev.find((f) => f.id === id);
+        if (file) {
+          URL.revokeObjectURL(file.preview);
+          if (file.processedPreview) {
+            URL.revokeObjectURL(file.processedPreview);
+          }
         }
+        return prev.filter((f) => f.id !== id);
+      });
+      if (selectedFileId === id) {
+        setSelectedFileId(null);
+        setOriginalDimensions(null);
+        setShowComparison(false);
       }
-      return prev.filter((f) => f.id !== id);
-    });
-    if (selectedFileId === id) {
-      setSelectedFileId(null);
-      setOriginalDimensions(null);
-      setShowComparison(false);
-    }
-  }, [selectedFileId]);
+    },
+    [selectedFileId]
+  );
 
-  const handleDownloadFile = useCallback((file: ImageFile) => {
-    if (!file.processedBlob) return;
-    const url = URL.createObjectURL(file.processedBlob);
-    const a = document.createElement('a');
-    a.href = url;
-    const baseName = file.name.replace(/\.[^.]+$/, '');
-    a.download = `${baseName}_converted${getExtension(settings.format)}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  }, [settings.format]);
+  const handleDownloadFile = useCallback(
+    (file: ImageFile) => {
+      if (!file.processedBlob) return;
+      const url = URL.createObjectURL(file.processedBlob);
+      const a = document.createElement('a');
+      a.href = url;
+      const baseName = file.name.replace(/\.[^.]+$/, '');
+      a.download = `${baseName}_converted${getExtension(settings.format)}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+    [settings.format]
+  );
 
   const handleDownloadAll = useCallback(() => {
-    files.filter(f => f.status === 'done').forEach((file, index) => {
-      setTimeout(() => handleDownloadFile(file), index * 200);
-    });
+    files
+      .filter((f) => f.status === 'done')
+      .forEach((file, index) => {
+        setTimeout(() => handleDownloadFile(file), index * 200);
+      });
   }, [files, handleDownloadFile]);
 
   const handleProcessAll = useCallback(async () => {
@@ -126,9 +152,7 @@ export default function App() {
 
     for (const file of files) {
       setFiles((prev) =>
-        prev.map((f) =>
-          f.id === file.id ? { ...f, status: 'processing' as const } : f
-        )
+        prev.map((f) => (f.id === file.id ? { ...f, status: 'processing' as const } : f))
       );
 
       try {
@@ -148,9 +172,7 @@ export default function App() {
         );
       } catch {
         setFiles((prev) =>
-          prev.map((f) =>
-            f.id === file.id ? { ...f, status: 'error' as const } : f
-          )
+          prev.map((f) => (f.id === file.id ? { ...f, status: 'error' as const } : f))
         );
       }
     }
@@ -159,19 +181,22 @@ export default function App() {
     setShowComparison(true);
   }, [files, settings, processImage]);
 
-  const handleSelectFile = useCallback(async (id: string) => {
-    setSelectedFileId(id);
-    setShowComparison(false);
-    const file = files.find((f) => f.id === id);
-    if (file) {
-      try {
-        const dims = await getImageDimensions(file.file);
-        setOriginalDimensions(dims);
-      } catch {
-        setOriginalDimensions(null);
+  const handleSelectFile = useCallback(
+    async (id: string) => {
+      setSelectedFileId(id);
+      setShowComparison(false);
+      const file = files.find((f) => f.id === id);
+      if (file) {
+        try {
+          const dims = await getImageDimensions(file.file);
+          setOriginalDimensions(dims);
+        } catch {
+          setOriginalDimensions(null);
+        }
       }
-    }
-  }, [files, getImageDimensions]);
+    },
+    [files, getImageDimensions]
+  );
 
   const handleClearAll = useCallback(() => {
     files.forEach((f) => {
@@ -188,7 +213,8 @@ export default function App() {
   const processedCount = files.filter((f) => f.status === 'done').length;
   const totalOriginalSize = files.reduce((sum, f) => sum + f.originalSize, 0);
   const totalProcessedSize = files.reduce((sum, f) => sum + (f.processedSize || 0), 0);
-  const totalSavings = totalOriginalSize > 0 ? Math.round((1 - totalProcessedSize / totalOriginalSize) * 100) : 0;
+  const totalSavings =
+    totalOriginalSize > 0 ? Math.round((1 - totalProcessedSize / totalOriginalSize) * 100) : 0;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors">
@@ -209,8 +235,8 @@ export default function App() {
               </span>
             </h2>
             <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              All processing happens right here in your browser. Your images never leave your device.
-              Convert, compress, and resize — instantly.
+              All processing happens right here in your browser. Your images never leave your
+              device. Convert, compress, and resize — instantly.
             </p>
 
             {/* Trust badges */}
@@ -291,19 +317,27 @@ export default function App() {
               {/* Stats */}
               {processedCount > 0 && (
                 <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800 p-4">
-                  <h4 className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 mb-2">Results</h4>
+                  <h4 className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 mb-2">
+                    Results
+                  </h4>
                   <div className="space-y-1.5 text-sm">
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">Original</span>
-                      <span className="font-medium text-gray-900 dark:text-white">{formatSize(totalOriginalSize)}</span>
+                      <span className="font-medium text-gray-900 dark:text-white">
+                        {formatSize(totalOriginalSize)}
+                      </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600 dark:text-gray-400">Converted</span>
-                      <span className="font-medium text-emerald-600 dark:text-emerald-400">{formatSize(totalProcessedSize)}</span>
+                      <span className="font-medium text-emerald-600 dark:text-emerald-400">
+                        {formatSize(totalProcessedSize)}
+                      </span>
                     </div>
                     <div className="flex justify-between items-center pt-1 border-t border-emerald-200 dark:border-emerald-800">
                       <span className="text-gray-600 dark:text-gray-400">Saved</span>
-                      <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">{totalSavings}%</span>
+                      <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
+                        {totalSavings}%
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -361,9 +395,7 @@ export default function App() {
                     </div>
                   </div>
                 ) : (
-                  <div className="p-12 text-center text-gray-400">
-                    Select an image to preview
-                  </div>
+                  <div className="p-12 text-center text-gray-400">Select an image to preview</div>
                 )}
 
                 {/* File info bar */}
@@ -375,7 +407,8 @@ export default function App() {
                       </span>
                       <span className="text-gray-400">•</span>
                       <span className="text-gray-500 dark:text-gray-400">
-                        {originalDimensions && `${originalDimensions.width} × ${originalDimensions.height}`}
+                        {originalDimensions &&
+                          `${originalDimensions.width} × ${originalDimensions.height}`}
                       </span>
                     </div>
                     <div className="flex items-center gap-2">
@@ -402,7 +435,8 @@ export default function App() {
                   className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold hover:shadow-lg hover:shadow-emerald-500/25 transition-all"
                 >
                   <Download className="w-5 h-5" />
-                  Download {selectedFile.name.replace(/\.[^.]+$/, '')}_converted{getExtension(settings.format)}
+                  Download {selectedFile.name.replace(/\.[^.]+$/, '')}_converted
+                  {getExtension(settings.format)}
                 </button>
               )}
             </div>
@@ -435,9 +469,12 @@ export default function App() {
               <div className="w-12 h-12 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-4">
                 <Zap className="w-6 h-6 text-violet-500" />
               </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Convert & Compress</h3>
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
+                Convert & Compress
+              </h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Transform images between WebP, JPEG, and PNG formats. Reduce file sizes by up to 80% with smart compression.
+                Transform images between WebP, JPEG, and PNG formats. Reduce file sizes by up to 80%
+                with smart compression.
               </p>
             </div>
             <div className="p-6 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
@@ -446,7 +483,8 @@ export default function App() {
               </div>
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2">100% Private</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Your files never leave your device. All processing happens locally in your browser using WebAssembly technology.
+                Your files never leave your device. All processing happens locally in your browser
+                using WebAssembly technology.
               </p>
             </div>
             <div className="p-6 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
@@ -455,7 +493,8 @@ export default function App() {
               </div>
               <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Batch Processing</h3>
               <p className="text-sm text-gray-600 dark:text-gray-400">
-                Process multiple images at once. Perfect for optimizing photos for websites, social media, or email attachments.
+                Process multiple images at once. Perfect for optimizing photos for websites, social
+                media, or email attachments.
               </p>
             </div>
           </div>
@@ -489,7 +528,8 @@ export default function App() {
       <footer className="mt-16 border-t border-gray-200 dark:border-gray-800 py-8">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <p className="text-sm text-gray-500 dark:text-gray-400">
-            PixelVault — All processing happens locally in your browser. No data is ever sent to any server.
+            PixelVault — All processing happens locally in your browser. No data is ever sent to any
+            server.
           </p>
           <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
             Built with React, Tailwind CSS, and the Canvas API. Open source & privacy-first.

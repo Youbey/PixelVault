@@ -19,14 +19,14 @@ PixelVault is a privacy-first image conversion tool to convert, compress, and op
 
 ## Technology Stack
 
-| Component    | Version   |
-|--------------|-----------|
-| React        | ^18.2.0   |
-| TypeScript   | ^5.7.0    |
-| Vite         | ^6.3.5    |
-| Tailwind CSS | ^4.1.7    |
-| Lucide React | ^0.294.0  |
-| UUID         | ^9.0.1    |
+| Component    | Version  |
+| ------------ | -------- |
+| React        | ^18.2.0  |
+| TypeScript   | ^5.7.0   |
+| Vite         | ^6.3.5   |
+| Tailwind CSS | ^4.1.7   |
+| Lucide React | ^0.294.0 |
+| UUID         | ^9.0.1   |
 
 ## Live Demo
 
@@ -94,8 +94,8 @@ Processing flow: Browser → React UI → Canvas API (local) → Blob → Downlo
 
 ## Scripts
 
-| Script            | Description              |
-|-------------------|--------------------------|
+| Script              | Description              |
+| ------------------- | ------------------------ |
 | `npm run dev`       | Start development server |
 | `npm run build`     | Build for production     |
 | `npm run typecheck` | TypeScript type checking |
