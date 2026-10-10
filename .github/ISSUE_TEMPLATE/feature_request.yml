@@ -1,0 +1,18 @@
+name: Feature request
+description: Suggest an idea for PixelVault
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      placeholder: What do you want to do?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      placeholder: Keep privacy-first in mind (local-only processing)
+    validations:
+      required: true
