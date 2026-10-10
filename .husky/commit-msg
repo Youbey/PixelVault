@@ -4,5 +4,5 @@ if command -v node >/dev/null 2>&1; then
   npx --no -- commitlint --edit "$1"
 else
   echo "node not found on host - running commitlint in throwaway Podman..."
-  podman run --rm -v ./:/app:z -w /app docker.io/node:22-alpine sh -c "apk add --no-cache git >/dev/null 2>&1; git config --global --add safe.directory /app; npx --no -- commitlint --edit $1"
+  podman run --rm -v ./:/app:z -w /app docker.io/node:22-alpine sh -c "apk add --no-cache git >/dev/null 2>&1; git config --global --add safe.directory /app; [ -d node_modules ] || npm ci --silent; npx --no -- commitlint --edit $1"
 fi
