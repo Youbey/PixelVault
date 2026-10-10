@@ -5,5 +5,5 @@ if command -v node >/dev/null 2>&1; then
   npx lint-staged
 else
   echo "node not found on host - running lint-staged in throwaway Podman..."
-  podman run --rm -v ./:/app:z -w /app docker.io/node:22-alpine sh -c "apk add --no-cache git >/dev/null 2>&1; git config --global --add safe.directory /app; npx lint-staged"
+  podman run --rm -v ./:/app:z -w /app docker.io/node:22-alpine sh -c "apk add --no-cache git >/dev/null 2>&1; git config --global --add safe.directory /app; [ -d node_modules ] || npm ci --silent; npx lint-staged"
 fi
