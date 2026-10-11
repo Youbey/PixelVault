@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { Upload, Image, FileImage } from 'lucide-react';
+import { Upload, ImagePlus } from 'lucide-react';
 
 interface DropZoneProps {
   onFilesSelected: (files: File[]) => void;
@@ -53,11 +53,11 @@ export function DropZone({ onFilesSelected }: DropZoneProps) {
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
       className={`
-        relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-300 cursor-pointer
+        group relative cursor-pointer rounded-lg border border-dashed p-10 text-center transition-all duration-200 sm:p-14
         ${
           isDragOver
-            ? 'border-violet-500 bg-violet-50 dark:bg-violet-900/20 scale-[1.02]'
-            : 'border-gray-300 dark:border-gray-700 hover:border-violet-400 dark:hover:border-violet-500 hover:bg-gray-50 dark:hover:bg-gray-800/50'
+            ? 'border-accent bg-accent/5 shadow-[0_0_0_4px_color-mix(in_srgb,var(--color-accent)_10%,transparent)]'
+            : 'border-line bg-surface-raised hover:border-ink-muted'
         }
       `}
     >
@@ -66,61 +66,31 @@ export function DropZone({ onFilesSelected }: DropZoneProps) {
         accept="image/*"
         multiple
         onChange={handleFileInput}
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
       />
 
       <div className="flex flex-col items-center gap-4">
         <div
           className={`
-            w-16 h-16 rounded-2xl flex items-center justify-center transition-all duration-300
-            ${isDragOver ? 'bg-violet-100 dark:bg-violet-800/50' : 'bg-gray-100 dark:bg-gray-800'}
+            flex h-14 w-14 items-center justify-center rounded-lg border transition-colors duration-200
+            ${
+              isDragOver
+                ? 'border-accent/40 bg-accent/10 text-accent'
+                : 'border-line bg-surface-overlay text-ink-muted group-hover:text-ink-secondary'
+            }
           `}
         >
-          {isDragOver ? (
-            <FileImage className="w-8 h-8 text-violet-500" />
-          ) : (
-            <Upload className="w-8 h-8 text-gray-400 dark:text-gray-500" />
-          )}
+          {isDragOver ? <ImagePlus className="h-6 w-6" /> : <Upload className="h-6 w-6" />}
         </div>
 
         <div>
-          <p className="text-lg font-semibold text-gray-700 dark:text-gray-200">
-            {isDragOver ? 'Drop your images here!' : 'Drag & drop images here'}
+          <p className="text-base font-medium text-ink">
+            {isDragOver ? 'Drop to add' : 'Drag & drop images'}
           </p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            or click to browse • Supports JPG, PNG, WebP, AVIF, GIF, BMP
+          <p className="mt-1 text-[13px] text-ink-muted">
+            or <span className="text-accent underline-offset-2 hover:underline">browse</span> — JPG,
+            PNG, WebP, AVIF, GIF, BMP
           </p>
-        </div>
-
-        <div className="flex items-center gap-4 mt-2">
-          <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-            <Image className="w-3.5 h-3.5" />
-            <span>Batch processing</span>
-          </div>
-          <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
-          <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
-              />
-            </svg>
-            <span>No uploads</span>
-          </div>
-          <div className="w-1 h-1 rounded-full bg-gray-300 dark:bg-gray-600" />
-          <div className="flex items-center gap-1.5 text-xs text-gray-400 dark:text-gray-500">
-            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M13 10V3L4 14h7v7l9-11h-7z"
-              />
-            </svg>
-            <span>Instant results</span>
-          </div>
         </div>
       </div>
     </div>

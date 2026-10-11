@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback, useEffect } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 interface ComparisonSliderProps {
   beforeSrc: string;
@@ -14,22 +14,10 @@ export function ComparisonSlider({
   afterLabel = 'Converted',
 }: ComparisonSliderProps) {
   const [sliderPosition, setSliderPosition] = useState(50);
-  const [containerWidth, setContainerWidth] = useState(0);
   const containerRef = useRef<HTMLDivElement>(null);
   const isDragging = useRef(false);
 
-  useEffect(() => {
-    const updateWidth = () => {
-      if (containerRef.current) {
-        setContainerWidth(containerRef.current.offsetWidth);
-      }
-    };
-    updateWidth();
-    window.addEventListener('resize', updateWidth);
-    return () => window.removeEventListener('resize', updateWidth);
-  }, []);
-
-  const handleMove = useCallback((clientX: number) => {
+  const setPositionFromClientX = useCallback((clientX: number) => {
     if (!containerRef.current) return;
     const rect = containerRef.current.getBoundingClientRect();
     const x = clientX - rect.left;
@@ -37,82 +25,88 @@ export function ComparisonSlider({
     setSliderPosition(percentage);
   }, []);
 
-  const handleMouseDown = useCallback(() => {
-    isDragging.current = true;
-  }, []);
-
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent) => {
-      if (isDragging.current) {
-        handleMove(e.clientX);
-      }
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      isDragging.current = true;
+      containerRef.current?.setPointerCapture?.(e.pointerId);
+      setPositionFromClientX(e.clientX);
     },
-    [handleMove]
+    [setPositionFromClientX]
   );
 
-  const handleMouseUp = useCallback(() => {
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent) => {
+      if (isDragging.current) {
+        setPositionFromClientX(e.clientX);
+      }
+    },
+    [setPositionFromClientX]
+  );
+
+  const handlePointerUp = useCallback(() => {
     isDragging.current = false;
   }, []);
 
-  const handleTouchMove = useCallback(
-    (e: React.TouchEvent) => {
-      handleMove(e.touches[0].clientX);
-    },
-    [handleMove]
-  );
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (e.key === 'ArrowLeft') {
+      e.preventDefault();
+      setSliderPosition((p) => Math.max(2, p - 2));
+    } else if (e.key === 'ArrowRight') {
+      e.preventDefault();
+      setSliderPosition((p) => Math.min(98, p + 2));
+    }
+  }, []);
 
   return (
     <div
       ref={containerRef}
-      className="relative w-full aspect-video rounded-xl overflow-hidden cursor-col-resize select-none bg-gray-100 dark:bg-gray-800"
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleMouseUp}
+      className="checkerboard relative aspect-video w-full select-none overflow-hidden rounded-md bg-canvas"
+      onPointerDown={handlePointerDown}
+      onPointerMove={handlePointerMove}
+      onPointerUp={handlePointerUp}
+      onPointerCancel={handlePointerUp}
     >
       {/* After image (full) */}
       <img
         src={afterSrc}
         alt="After"
-        className="absolute inset-0 w-full h-full object-contain"
+        className="absolute inset-0 h-full w-full object-contain"
         draggable={false}
       />
 
-      {/* Before image (clipped) */}
-      <div className="absolute inset-0 overflow-hidden" style={{ width: `${sliderPosition}%` }}>
+      {/* Before image — identical geometry, clipped from the right */}
+      <div
+        className="absolute inset-0"
+        style={{ clipPath: `inset(0 ${100 - sliderPosition}% 0 0)` }}
+      >
         <img
           src={beforeSrc}
           alt="Before"
-          className="absolute inset-0 h-full object-contain"
-          style={{ width: containerWidth > 0 ? `${containerWidth}px` : '100%' }}
+          className="absolute inset-0 h-full w-full object-contain"
           draggable={false}
         />
       </div>
 
-      {/* Slider line */}
+      {/* Divider + handle */}
       <div
-        className="absolute top-0 bottom-0 w-0.5 bg-white/90 shadow-lg z-10"
-        style={{ left: `${sliderPosition}%`, transform: 'translateX(-1px)' }}
+        className="absolute bottom-0 top-0 z-10 w-px bg-white/90 shadow-[0_0_4px_rgba(0,0,0,0.4)]"
+        style={{ left: `${sliderPosition}%` }}
       >
-        {/* Slider handle */}
         <div
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white shadow-xl border-2 border-violet-400 flex items-center justify-center cursor-col-resize hover:scale-110 transition-transform"
-          onMouseDown={handleMouseDown}
-          onTouchStart={handleMouseDown}
+          role="slider"
+          tabIndex={0}
+          aria-label="Comparison position"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={Math.round(sliderPosition)}
+          onKeyDown={handleKeyDown}
+          className="absolute left-1/2 top-1/2 flex h-7 w-7 -translate-x-1/2 -translate-y-1/2 cursor-col-resize items-center justify-center rounded-full border border-white/30 bg-white/95 shadow-md transition-transform hover:scale-110 focus:outline-none focus-visible:ring-2 focus-visible:ring-accent"
         >
-          <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
+          <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             <path
-              d="M7 4L3 10L7 16"
-              stroke="#7c3aed"
-              strokeWidth="2.5"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-            <path
-              d="M13 4L17 10L13 16"
-              stroke="#7c3aed"
-              strokeWidth="2.5"
+              d="M4.5 3L1.5 7l3 4M9.5 3l3 4-3 4"
+              stroke="#18181b"
+              strokeWidth="1.5"
               strokeLinecap="round"
               strokeLinejoin="round"
             />
@@ -121,10 +115,10 @@ export function ComparisonSlider({
       </div>
 
       {/* Labels */}
-      <div className="absolute top-3 left-3 px-2.5 py-1 rounded-lg bg-black/60 text-white text-xs font-medium backdrop-blur-sm z-20">
+      <div className="pointer-events-none absolute left-2 top-2 z-20 rounded bg-black/55 px-1.5 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
         {beforeLabel}
       </div>
-      <div className="absolute top-3 right-3 px-2.5 py-1 rounded-lg bg-black/60 text-white text-xs font-medium backdrop-blur-sm z-20">
+      <div className="pointer-events-none absolute right-2 top-2 z-20 rounded bg-black/55 px-1.5 py-0.5 text-[11px] font-medium text-white backdrop-blur-sm">
         {afterLabel}
       </div>
     </div>

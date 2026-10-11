@@ -2,9 +2,62 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+@theme {
+  --color-surface: #fafafa;
+  --color-surface-raised: #ffffff;
+  --color-surface-overlay: #f4f4f5;
+  --color-canvas: #e8e8ea;
+
+  --color-ink: #18181b;
+  --color-ink-secondary: #52525b;
+  --color-ink-muted: #a1a1aa;
+  --color-line: #e4e4e7;
+
+  --color-accent: #8b5cf6;
+  --color-accent-strong: #7c3aed;
+  --color-success: #10b981;
+
+  --radius-card: 0.5rem;
+}
+
+.dark {
+  --color-surface: #09090b;
+  --color-surface-raised: #111113;
+  --color-surface-overlay: #18181b;
+  --color-canvas: #101012;
+
+  --color-ink: #fafafa;
+  --color-ink-secondary: #a1a1aa;
+  --color-ink-muted: #71717a;
+  --color-line: #27272a;
+
+  --color-accent: #8b5cf6;
+  --color-accent-strong: #8e7bd8;
+  --color-success: #34d399;
+}
+
+/* Pro-tool density: 13px control text, tabular numerals for stats */
+.tool {
+  font-size: 13px;
+  font-feature-settings: 'tnum';
+}
+
+/* Canvas checkerboard backdrop (transparency-friendly) */
+.checkerboard {
+  background-image: conic-gradient(
+    from 90deg,
+    color-mix(in srgb, var(--color-ink) 4%, transparent) 0deg 90deg,
+    transparent 90deg 180deg,
+    color-mix(in srgb, var(--color-ink) 4%, transparent) 180deg 270deg,
+    transparent 270deg 360deg
+  );
+  background-size: 20px 20px;
+}
+
 /* Custom scrollbar */
 .scrollbar-thin::-webkit-scrollbar {
-  height: 4px;
+  height: 6px;
+  width: 6px;
 }
 
 .scrollbar-thin::-webkit-scrollbar-track {
@@ -12,39 +65,43 @@
 }
 
 .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #d1d5db;
+  background: var(--color-line);
   border-radius: 9999px;
 }
 
-.dark .scrollbar-thin::-webkit-scrollbar-thumb {
-  background: #4b5563;
+.scrollbar-thin:hover::-webkit-scrollbar-thumb {
+  background: var(--color-ink-muted);
 }
 
-/* Range slider styling */
+/* Range slider — slim track, single accent */
 input[type='range'] {
   -webkit-appearance: none;
   appearance: none;
   background: transparent;
+  height: 20px;
 }
 
 input[type='range']::-webkit-slider-runnable-track {
-  height: 8px;
+  height: 4px;
   border-radius: 9999px;
-  background: linear-gradient(to right, #8b5cf6, #6366f1);
+  background: linear-gradient(
+    to right,
+    var(--color-accent) var(--range-fill, 50%),
+    var(--color-line) var(--range-fill, 50%)
+  );
 }
 
 input[type='range']::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 20px;
-  height: 20px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: white;
-  border: 3px solid #8b5cf6;
-  margin-top: -6px;
+  background: var(--color-surface-raised);
+  border: 2px solid var(--color-accent);
+  margin-top: -5px;
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(139, 92, 246, 0.3);
-  transition: transform 0.15s ease;
+  transition: transform 0.12s ease;
 }
 
 input[type='range']::-webkit-slider-thumb:hover {
@@ -52,31 +109,29 @@ input[type='range']::-webkit-slider-thumb:hover {
 }
 
 input[type='range']::-moz-range-track {
-  height: 8px;
+  height: 4px;
   border-radius: 9999px;
-  background: linear-gradient(to right, #8b5cf6, #6366f1);
+  background: linear-gradient(
+    to right,
+    var(--color-accent) var(--range-fill, 50%),
+    var(--color-line) var(--range-fill, 50%)
+  );
 }
 
 input[type='range']::-moz-range-thumb {
-  width: 20px;
-  height: 20px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: white;
-  border: 3px solid #8b5cf6;
+  background: var(--color-surface-raised);
+  border: 2px solid var(--color-accent);
   cursor: pointer;
-  box-shadow: 0 2px 6px rgba(139, 92, 246, 0.3);
-}
-
-/* Dark mode range slider */
-.dark input[type='range']::-webkit-slider-runnable-track {
-  background: linear-gradient(to right, #7c3aed, #4f46e5);
 }
 
 /* Animations */
 @keyframes fadeIn {
   from {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(6px);
   }
   to {
     opacity: 1;
@@ -85,10 +140,19 @@ input[type='range']::-moz-range-thumb {
 }
 
 .animate-fade-in {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.25s ease-out;
 }
 
-/* Smooth transitions */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 * {
   scroll-behavior: smooth;
 }
@@ -97,4 +161,9 @@ input[type='range']::-moz-range-thumb {
 input[type='number']::-webkit-inner-spin-button,
 input[type='number']::-webkit-outer-spin-button {
   opacity: 1;
+}
+
+/* Native select in dark mode */
+.dark select {
+  color-scheme: dark;
 }

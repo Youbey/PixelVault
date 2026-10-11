@@ -1,4 +1,4 @@
-import { Settings, Maximize2, Sliders } from 'lucide-react';
+import { Link2, Link2Off } from 'lucide-react';
 import { ConversionSettings, OutputFormat } from '../types';
 
 interface SettingsPanelProps {
@@ -8,19 +8,28 @@ interface SettingsPanelProps {
 }
 
 const FORMAT_OPTIONS: { value: OutputFormat; label: string; ext: string }[] = [
-  { value: 'image/webp', label: 'WebP', ext: '.webp' },
-  { value: 'image/jpeg', label: 'JPEG', ext: '.jpg' },
-  { value: 'image/png', label: 'PNG', ext: '.png' },
+  { value: 'image/webp', label: 'WebP', ext: 'webp' },
+  { value: 'image/jpeg', label: 'JPEG', ext: 'jpg' },
+  { value: 'image/png', label: 'PNG', ext: 'png' },
 ];
 
 const PRESETS = [
-  { label: 'Instagram Post', width: 1080, height: 1080 },
-  { label: 'Instagram Story', width: 1080, height: 1920 },
-  { label: 'Twitter Header', width: 1500, height: 500 },
-  { label: 'Facebook Cover', width: 820, height: 312 },
-  { label: 'YouTube Thumb', width: 1280, height: 720 },
-  { label: 'Email (<1MB)', width: 800, height: null },
+  { label: 'Original', width: null as number | null, height: null as number | null },
+  { label: 'Instagram Post — 1080×1080', width: 1080, height: 1080 },
+  { label: 'Instagram Story — 1080×1920', width: 1080, height: 1920 },
+  { label: 'Twitter Header — 1500×500', width: 1500, height: 500 },
+  { label: 'Facebook Cover — 820×312', width: 820, height: 312 },
+  { label: 'YouTube Thumb — 1280×720', width: 1280, height: 720 },
+  { label: 'Email (<1MB) — 800 wide', width: 800, height: null as number | null },
 ];
+
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="mb-2 text-[11px] font-medium uppercase tracking-wider text-ink-muted">
+      {children}
+    </div>
+  );
+}
 
 export function SettingsPanel({
   settings,
@@ -64,47 +73,36 @@ export function SettingsPanel({
     }
   };
 
-  return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-6 space-y-6">
-      <div className="flex items-center gap-2">
-        <Settings className="w-5 h-5 text-violet-500" />
-        <h3 className="font-semibold text-gray-900 dark:text-white">Conversion Settings</h3>
-      </div>
+  const inputClass =
+    'w-full rounded-md border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none transition-colors placeholder:text-ink-muted focus:border-accent';
 
-      {/* Format Selection */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Output Format
-        </label>
-        <div className="grid grid-cols-3 gap-2">
+  return (
+    <div className="tool space-y-5">
+      {/* Format */}
+      <div>
+        <SectionLabel>Format</SectionLabel>
+        <div className="grid grid-cols-3 gap-1 rounded-md border border-line bg-surface p-1">
           {FORMAT_OPTIONS.map((opt) => (
             <button
               key={opt.value}
               onClick={() => updateSetting('format', opt.value)}
-              className={`
-                px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200
-                ${
-                  settings.format === opt.value
-                    ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 border-2 border-violet-300 dark:border-violet-600 shadow-sm'
-                    : 'bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400 border-2 border-transparent hover:bg-gray-100 dark:hover:bg-gray-600'
-                }
-              `}
+              className={`rounded px-2 py-1.5 text-[13px] font-medium transition-colors ${
+                settings.format === opt.value
+                  ? 'bg-accent text-white shadow-sm'
+                  : 'text-ink-secondary hover:bg-surface-overlay hover:text-ink'
+              }`}
             >
-              <div>{opt.label}</div>
-              <div className="text-xs opacity-60">{opt.ext}</div>
+              {opt.label}
             </button>
           ))}
         </div>
       </div>
 
-      {/* Quality Slider */}
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-            <Sliders className="w-4 h-4" />
-            Quality
-          </label>
-          <span className="text-sm font-mono text-violet-600 dark:text-violet-400 bg-violet-50 dark:bg-violet-900/30 px-2 py-0.5 rounded">
+      {/* Quality */}
+      <div>
+        <div className="mb-2 flex items-center justify-between">
+          <SectionLabel>Quality</SectionLabel>
+          <span className="rounded bg-surface-overlay px-1.5 py-0.5 font-mono text-[12px] font-medium text-accent">
             {settings.quality}%
           </span>
         </div>
@@ -114,78 +112,87 @@ export function SettingsPanel({
           max="100"
           value={settings.quality}
           onChange={(e) => updateSetting('quality', parseInt(e.target.value))}
-          className="w-full h-2 bg-gray-200 dark:bg-gray-700 rounded-lg appearance-none cursor-pointer accent-violet-500"
+          className="w-full cursor-pointer"
+          style={{ '--range-fill': `${settings.quality}%` } as React.CSSProperties}
         />
-        <div className="flex justify-between text-xs text-gray-400">
+        <div className="mt-1 flex justify-between text-[11px] text-ink-muted">
           <span>Smallest file</span>
           <span>Best quality</span>
         </div>
       </div>
 
-      {/* Resize Controls */}
-      <div className="space-y-3">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
-          <Maximize2 className="w-4 h-4" />
-          Resize
-        </label>
-
-        <div className="flex items-center gap-2">
-          <div className="flex-1">
-            <label className="text-xs text-gray-500 dark:text-gray-400">Width</label>
-            <input
-              type="number"
-              value={settings.width ?? ''}
-              onChange={(e) => handleWidthChange(e.target.value)}
-              placeholder={originalDimensions?.width.toString() || 'Auto'}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none"
-            />
-          </div>
-          <span className="text-gray-400 mt-4">×</span>
-          <div className="flex-1">
-            <label className="text-xs text-gray-500 dark:text-gray-400">Height</label>
-            <input
-              type="number"
-              value={settings.height ?? ''}
-              onChange={(e) => handleHeightChange(e.target.value)}
-              placeholder={originalDimensions?.height.toString() || 'Auto'}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 dark:border-gray-600 bg-gray-50 dark:bg-gray-700 text-gray-900 dark:text-white text-sm focus:ring-2 focus:ring-violet-500 focus:border-transparent outline-none"
-            />
-          </div>
-        </div>
-
-        <label className="flex items-center gap-2 cursor-pointer">
+      {/* Resize */}
+      <div>
+        <SectionLabel>Resize</SectionLabel>
+        <div className="flex items-center gap-1.5">
           <input
-            type="checkbox"
-            checked={settings.maintainAspectRatio}
-            onChange={(e) => updateSetting('maintainAspectRatio', e.target.checked)}
-            className="w-4 h-4 rounded border-gray-300 dark:border-gray-600 text-violet-500 focus:ring-violet-500"
+            type="number"
+            value={settings.width ?? ''}
+            onChange={(e) => handleWidthChange(e.target.value)}
+            placeholder={originalDimensions?.width.toString() || 'Auto'}
+            aria-label="Width"
+            className={inputClass}
           />
-          <span className="text-xs text-gray-600 dark:text-gray-400">Maintain aspect ratio</span>
-        </label>
+          <button
+            onClick={() => updateSetting('maintainAspectRatio', !settings.maintainAspectRatio)}
+            className={`flex h-[30px] w-[30px] flex-shrink-0 items-center justify-center rounded-md border transition-colors ${
+              settings.maintainAspectRatio
+                ? 'border-accent/40 bg-accent/10 text-accent'
+                : 'border-line bg-surface text-ink-muted hover:text-ink'
+            }`}
+            title={settings.maintainAspectRatio ? 'Aspect ratio locked' : 'Aspect ratio unlocked'}
+            aria-pressed={settings.maintainAspectRatio}
+          >
+            {settings.maintainAspectRatio ? (
+              <Link2 className="h-3.5 w-3.5" />
+            ) : (
+              <Link2Off className="h-3.5 w-3.5" />
+            )}
+          </button>
+          <input
+            type="number"
+            value={settings.height ?? ''}
+            onChange={(e) => handleHeightChange(e.target.value)}
+            placeholder={originalDimensions?.height.toString() || 'Auto'}
+            aria-label="Height"
+            className={inputClass}
+          />
+        </div>
       </div>
 
       {/* Presets */}
-      <div className="space-y-2">
-        <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          Quick Presets
-        </label>
-        <div className="grid grid-cols-2 gap-1.5">
+      <div>
+        <SectionLabel>Presets</SectionLabel>
+        <select
+          value={
+            settings.width === null && settings.height === null
+              ? 'Original'
+              : PRESETS.find((p) => p.width === settings.width && p.height === settings.height)
+                  ?.label || 'custom'
+          }
+          onChange={(e) => {
+            const preset = PRESETS.find((p) => p.label === e.target.value);
+            if (preset) {
+              onSettingsChange({
+                ...settings,
+                width: preset.width,
+                height: preset.height,
+              });
+            }
+          }}
+          className="w-full cursor-pointer rounded-md border border-line bg-surface px-2.5 py-1.5 text-[13px] text-ink outline-none transition-colors focus:border-accent"
+        >
+          {settings.width === null && settings.height === null ? null : (
+            <option value="custom" disabled>
+              Custom — {settings.width ?? 'auto'}×{settings.height ?? 'auto'}
+            </option>
+          )}
           {PRESETS.map((preset) => (
-            <button
-              key={preset.label}
-              onClick={() => {
-                updateSetting('width', preset.width);
-                updateSetting('height', preset.height);
-              }}
-              className="px-2 py-1.5 text-xs rounded-lg bg-gray-50 dark:bg-gray-700 text-gray-600 dark:text-gray-400 hover:bg-violet-50 dark:hover:bg-violet-900/30 hover:text-violet-600 dark:hover:text-violet-400 transition-colors text-left"
-            >
+            <option key={preset.label} value={preset.label}>
               {preset.label}
-              <span className="block text-[10px] opacity-60">
-                {preset.width}×{preset.height || 'auto'}
-              </span>
-            </button>
+            </option>
           ))}
-        </div>
+        </select>
       </div>
     </div>
   );
