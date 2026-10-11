@@ -1,22 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import {
-  Download,
-  DownloadCloud,
-  Trash2,
-  Zap,
-  Shield,
-  Eye,
-  Lock,
-  Cpu,
-  ArrowRight,
-  Check,
-} from 'lucide-react';
-import { Header } from './components/Header';
+import { Download, Trash2, Zap, Lock, Eye, ArrowRight } from 'lucide-react';
+import { TopBar } from './components/TopBar';
 import { DropZone } from './components/DropZone';
 import { SettingsPanel } from './components/SettingsPanel';
 import { ComparisonSlider } from './components/ComparisonSlider';
-import { BatchList } from './components/BatchList';
+import { Filmstrip } from './components/Filmstrip';
 import { useImageProcessor } from './hooks/useImageProcessor';
 import { ImageFile, ConversionSettings } from './types';
 
@@ -217,325 +206,207 @@ export default function App() {
     totalOriginalSize > 0 ? Math.round((1 - totalProcessedSize / totalOriginalSize) * 100) : 0;
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-950 text-gray-900 dark:text-white transition-colors">
-      <Header darkMode={darkMode} onToggleDarkMode={() => setDarkMode(!darkMode)} />
+    <div className="flex min-h-screen flex-col bg-surface text-ink transition-colors">
+      <TopBar
+        darkMode={darkMode}
+        onToggleDarkMode={() => setDarkMode(!darkMode)}
+        context={
+          selectedFile
+            ? {
+                fileName: selectedFile.name,
+                dimensions: originalDimensions,
+                savings: totalSavings,
+                hasResults: processedCount > 0,
+              }
+            : null
+        }
+        processedCount={processedCount}
+        onDownloadAll={handleDownloadAll}
+      />
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Hero Section */}
-        {files.length === 0 && (
-          <div className="text-center mb-10">
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300 text-sm font-medium mb-4">
-              <Shield className="w-4 h-4" />
-              Zero-knowledge image processing
+      {files.length === 0 ? (
+        /* ── Empty state: hero + drop zone ─────────────────────────── */
+        <main className="flex flex-1 items-center justify-center px-4">
+          <div className="w-full max-w-xl space-y-6 py-12">
+            <div className="space-y-2 text-center">
+              <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                Convert images. <span className="text-accent">Privately.</span>
+              </h2>
+              <p className="mx-auto max-w-md text-[13px] text-ink-secondary">
+                Everything runs in this browser tab — your files never leave your device.
+              </p>
             </div>
-            <h2 className="text-4xl sm:text-5xl font-bold text-gray-900 dark:text-white mb-4">
-              Convert images{' '}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-violet-500 to-indigo-500">
-                privately
-              </span>
-            </h2>
-            <p className="text-lg text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
-              All processing happens right here in your browser. Your images never leave your
-              device. Convert, compress, and resize — instantly.
-            </p>
 
-            {/* Trust badges */}
-            <div className="flex flex-wrap items-center justify-center gap-6 mt-8">
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <Lock className="w-4 h-4 text-emerald-500" />
-                <span>No server uploads</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <Eye className="w-4 h-4 text-blue-500" />
-                <span>Open & transparent</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <Cpu className="w-4 h-4 text-orange-500" />
-                <span>WebAssembly powered</span>
-              </div>
-              <div className="flex items-center gap-2 text-sm text-gray-500 dark:text-gray-400">
-                <Zap className="w-4 h-4 text-yellow-500" />
-                <span>Lightning fast</span>
-              </div>
+            <DropZone onFilesSelected={handleFilesSelected} />
+
+            <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-[12px] text-ink-muted">
+              <span className="flex items-center gap-1.5">
+                <Lock className="h-3.5 w-3.5" />
+                No uploads
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Eye className="h-3.5 w-3.5" />
+                Open source
+              </span>
+              <span className="flex items-center gap-1.5">
+                <Zap className="h-3.5 w-3.5" />
+                Instant
+              </span>
             </div>
           </div>
-        )}
-
-        {/* Drop Zone */}
-        <DropZone onFilesSelected={handleFilesSelected} />
-
-        {/* Main Content */}
-        {files.length > 0 && (
-          <div className="mt-8 grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left: Settings */}
-            <div className="lg:col-span-3 space-y-4">
+        </main>
+      ) : (
+        /* ── Workspace ──────────────────────────────────────────────── */
+        <main className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col gap-4 p-4 lg:h-[calc(100vh-3.5rem)] lg:flex-row lg:overflow-hidden">
+          {/* Sidebar: settings + actions + stats */}
+          <aside
+            className="animate-fade-in order-2 flex flex-shrink-0 flex-col gap-3 scrollbar-thin lg:order-1 lg:w-[300px] lg:overflow-y-auto"
+            aria-label="Conversion settings"
+          >
+            <section className="rounded-lg border border-line bg-surface-raised p-4">
               <SettingsPanel
                 settings={settings}
                 onSettingsChange={setSettings}
                 originalDimensions={originalDimensions}
               />
+            </section>
 
-              {/* Action Buttons */}
-              <div className="space-y-2">
-                <button
-                  onClick={handleProcessAll}
-                  disabled={isProcessing || files.length === 0}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-violet-500 to-indigo-600 text-white font-semibold shadow-lg shadow-violet-500/25 hover:shadow-violet-500/40 hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100"
-                >
-                  {isProcessing ? (
+            <div className="flex gap-2">
+              <button
+                onClick={handleProcessAll}
+                disabled={isProcessing}
+                className="flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-accent text-[13px] font-semibold text-white shadow-sm transition-all hover:bg-accent-strong active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isProcessing ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                    Processing…
+                  </>
+                ) : (
+                  <>
+                    <Zap className="h-4 w-4" />
+                    Convert {files.length} image{files.length > 1 ? 's' : ''}
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleClearAll}
+                disabled={isProcessing}
+                className="flex h-10 w-10 items-center justify-center rounded-md border border-line text-ink-muted transition-colors hover:border-red-500/40 hover:bg-red-500/10 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-50"
+                title="Clear all"
+                aria-label="Clear all"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+
+            {processedCount > 0 && (
+              <section className="rounded-lg border border-line bg-surface-raised p-4">
+                <div className="mb-2 text-[11px] font-medium uppercase tracking-wider text-ink-muted">
+                  Results
+                </div>
+                <dl className="tool space-y-1.5">
+                  <div className="flex justify-between">
+                    <dt className="text-ink-secondary">Original</dt>
+                    <dd className="font-medium">{formatSize(totalOriginalSize)}</dd>
+                  </div>
+                  <div className="flex justify-between">
+                    <dt className="text-ink-secondary">Converted</dt>
+                    <dd className="font-medium text-success">{formatSize(totalProcessedSize)}</dd>
+                  </div>
+                  <div className="flex justify-between border-t border-line pt-1.5">
+                    <dt className="text-ink-secondary">Saved</dt>
+                    <dd className="text-[15px] font-bold text-success">−{totalSavings}%</dd>
+                  </div>
+                </dl>
+              </section>
+            )}
+          </aside>
+
+          {/* Canvas + info + filmstrip */}
+          <div className="animate-fade-in order-1 flex min-w-0 flex-1 flex-col gap-3 lg:order-2">
+            <section className="checkerboard flex min-h-[280px] flex-1 items-center justify-center overflow-hidden rounded-lg border border-line bg-canvas lg:min-h-0">
+              {selectedFile && showComparison && selectedFile.processedPreview ? (
+                <div className="w-full p-2">
+                  <ComparisonSlider
+                    beforeSrc={selectedFile.preview}
+                    afterSrc={selectedFile.processedPreview}
+                    beforeLabel="Original"
+                    afterLabel="Converted"
+                  />
+                </div>
+              ) : selectedFile ? (
+                <img
+                  src={selectedFile.preview}
+                  alt={selectedFile.name}
+                  className="max-h-full max-w-full object-contain p-2"
+                />
+              ) : (
+                <p className="text-[13px] text-ink-muted">Select an image to preview</p>
+              )}
+            </section>
+
+            {/* File info bar */}
+            {selectedFile && (
+              <div className="tool flex flex-wrap items-center justify-between gap-2 text-[12px]">
+                <div className="flex min-w-0 items-center gap-2 text-ink-muted">
+                  <span className="max-w-[220px] truncate font-medium text-ink">
+                    {selectedFile.name}
+                  </span>
+                  {originalDimensions && (
+                    <span className="flex-shrink-0">
+                      {originalDimensions.width}×{originalDimensions.height}
+                    </span>
+                  )}
+                </div>
+                <div className="flex items-center gap-2 text-ink-muted">
+                  <span>{formatSize(selectedFile.originalSize)}</span>
+                  {selectedFile.processedSize && (
                     <>
-                      <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-5 h-5" />
-                      Convert {files.length} image{files.length > 1 ? 's' : ''}
+                      <ArrowRight className="h-3 w-3" />
+                      <span className="font-medium text-success">
+                        {formatSize(selectedFile.processedSize)}
+                      </span>
+                      <button
+                        onClick={() => handleDownloadFile(selectedFile)}
+                        className="flex items-center gap-1 rounded-md border border-line px-2 py-1 font-medium text-ink-secondary transition-colors hover:border-success/40 hover:bg-success/10 hover:text-success"
+                      >
+                        <Download className="h-3 w-3" />
+                        Save
+                      </button>
                     </>
                   )}
-                </button>
-
-                {processedCount > 0 && (
-                  <button
-                    onClick={handleDownloadAll}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-emerald-500 text-white font-semibold hover:bg-emerald-600 shadow-lg shadow-emerald-500/25 transition-all"
-                  >
-                    <DownloadCloud className="w-5 h-5" />
-                    Download All ({processedCount})
-                  </button>
-                )}
-
-                <button
-                  onClick={handleClearAll}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-600 dark:text-gray-400 hover:bg-red-50 dark:hover:bg-red-900/20 hover:text-red-600 dark:hover:text-red-400 hover:border-red-200 dark:hover:border-red-800 transition-all"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Clear All
-                </button>
+                </div>
               </div>
+            )}
 
-              {/* Stats */}
-              {processedCount > 0 && (
-                <div className="bg-gradient-to-br from-emerald-50 to-teal-50 dark:from-emerald-900/20 dark:to-teal-900/20 rounded-2xl border border-emerald-200 dark:border-emerald-800 p-4">
-                  <h4 className="text-sm font-semibold text-emerald-800 dark:text-emerald-300 mb-2">
-                    Results
-                  </h4>
-                  <div className="space-y-1.5 text-sm">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Original</span>
-                      <span className="font-medium text-gray-900 dark:text-white">
-                        {formatSize(totalOriginalSize)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span className="text-gray-600 dark:text-gray-400">Converted</span>
-                      <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                        {formatSize(totalProcessedSize)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center pt-1 border-t border-emerald-200 dark:border-emerald-800">
-                      <span className="text-gray-600 dark:text-gray-400">Saved</span>
-                      <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">
-                        {totalSavings}%
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            {/* Center: Preview & Comparison */}
-            <div className="lg:col-span-5 space-y-4">
-              {/* File Tabs */}
-              {files.length > 1 && (
-                <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-thin">
-                  {files.map((file) => (
-                    <button
-                      key={file.id}
-                      onClick={() => handleSelectFile(file.id)}
-                      className={`
-                        flex-shrink-0 flex items-center gap-2 px-3 py-2 rounded-lg text-sm transition-all
-                        ${
-                          selectedFileId === file.id
-                            ? 'bg-violet-100 dark:bg-violet-900/40 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-700'
-                            : 'bg-gray-100 dark:bg-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-200 dark:hover:bg-gray-700 border border-transparent'
-                        }
-                      `}
-                    >
-                      <img src={file.preview} alt="" className="w-5 h-5 rounded object-cover" />
-                      <span className="max-w-[100px] truncate">{file.name}</span>
-                      {file.status === 'done' && <Check className="w-3.5 h-3.5 text-emerald-500" />}
-                      {file.status === 'processing' && (
-                        <div className="w-3.5 h-3.5 border-2 border-violet-300 border-t-violet-600 rounded-full animate-spin" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Preview Area */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 overflow-hidden">
-                {selectedFile && showComparison && selectedFile.processedPreview ? (
-                  <div className="p-4">
-                    <ComparisonSlider
-                      beforeSrc={selectedFile.preview}
-                      afterSrc={selectedFile.processedPreview}
-                      beforeLabel="Original"
-                      afterLabel="Converted"
-                    />
-                  </div>
-                ) : selectedFile ? (
-                  <div className="p-4">
-                    <div className="aspect-video flex items-center justify-center bg-gray-50 dark:bg-gray-900 rounded-xl overflow-hidden">
-                      <img
-                        src={selectedFile.preview}
-                        alt={selectedFile.name}
-                        className="max-w-full max-h-full object-contain"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="p-12 text-center text-gray-400">Select an image to preview</div>
-                )}
-
-                {/* File info bar */}
-                {selectedFile && (
-                  <div className="px-4 py-3 border-t border-gray-100 dark:border-gray-700 flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-3">
-                      <span className="font-medium text-gray-700 dark:text-gray-300 truncate max-w-[200px]">
-                        {selectedFile.name}
-                      </span>
-                      <span className="text-gray-400">•</span>
-                      <span className="text-gray-500 dark:text-gray-400">
-                        {originalDimensions &&
-                          `${originalDimensions.width} × ${originalDimensions.height}`}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-gray-500 dark:text-gray-400">
-                        {formatSize(selectedFile.originalSize)}
-                      </span>
-                      {selectedFile.processedSize && (
-                        <>
-                          <ArrowRight className="w-3 h-3 text-gray-400" />
-                          <span className="font-medium text-emerald-600 dark:text-emerald-400">
-                            {formatSize(selectedFile.processedSize)}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Download button for single file */}
-              {selectedFile?.status === 'done' && selectedFile.processedBlob && (
-                <button
-                  onClick={() => handleDownloadFile(selectedFile)}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-500 text-white font-semibold hover:shadow-lg hover:shadow-emerald-500/25 transition-all"
-                >
-                  <Download className="w-5 h-5" />
-                  Download {selectedFile.name.replace(/\.[^.]+$/, '')}_converted
-                  {getExtension(settings.format)}
-                </button>
-              )}
-            </div>
-
-            {/* Right: Batch List */}
-            <div className="lg:col-span-4">
-              <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h3 className="font-semibold text-gray-900 dark:text-white">
-                    Files ({files.length})
-                  </h3>
-                  <span className="text-xs text-gray-500 dark:text-gray-400">
-                    {processedCount}/{files.length} converted
-                  </span>
-                </div>
-                <BatchList
+            {/* Filmstrip */}
+            <div className="flex items-center gap-3">
+              <span className="hidden flex-shrink-0 text-[11px] font-medium uppercase tracking-wider text-ink-muted sm:block">
+                {processedCount}/{files.length}
+              </span>
+              <div className="min-w-0 flex-1">
+                <Filmstrip
                   files={files}
+                  selectedFileId={selectedFileId}
+                  onSelect={handleSelectFile}
                   onRemove={handleRemoveFile}
                   onDownload={handleDownloadFile}
+                  onAddFiles={handleFilesSelected}
                 />
               </div>
             </div>
           </div>
-        )}
+        </main>
+      )}
 
-        {/* Features Section (shown when no files) */}
-        {files.length === 0 && (
-          <div className="mt-16 grid grid-cols-1 md:grid-cols-3 gap-6">
-            <div className="p-6 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-              <div className="w-12 h-12 rounded-xl bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center mb-4">
-                <Zap className="w-6 h-6 text-violet-500" />
-              </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">
-                Convert & Compress
-              </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Transform images between WebP, JPEG, and PNG formats. Reduce file sizes by up to 80%
-                with smart compression.
-              </p>
-            </div>
-            <div className="p-6 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-              <div className="w-12 h-12 rounded-xl bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center mb-4">
-                <Shield className="w-6 h-6 text-blue-500" />
-              </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">100% Private</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Your files never leave your device. All processing happens locally in your browser
-                using WebAssembly technology.
-              </p>
-            </div>
-            <div className="p-6 rounded-2xl bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700">
-              <div className="w-12 h-12 rounded-xl bg-emerald-100 dark:bg-emerald-900/30 flex items-center justify-center mb-4">
-                <Download className="w-6 h-6 text-emerald-500" />
-              </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white mb-2">Batch Processing</h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
-                Process multiple images at once. Perfect for optimizing photos for websites, social
-                media, or email attachments.
-              </p>
-            </div>
-          </div>
-        )}
-
-        {/* How it works section */}
-        {files.length === 0 && (
-          <div className="mt-16 text-center">
-            <h3 className="text-2xl font-bold text-gray-900 dark:text-white mb-8">How it works</h3>
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-              {[
-                { step: '1', title: 'Drop Files', desc: 'Drag & drop or browse for images' },
-                { step: '2', title: 'Configure', desc: 'Choose format, quality & size' },
-                { step: '3', title: 'Convert', desc: 'Processing happens in your browser' },
-                { step: '4', title: 'Download', desc: 'Save your optimized images' },
-              ].map((item) => (
-                <div key={item.step} className="flex flex-col items-center gap-3 p-4">
-                  <div className="w-10 h-10 rounded-full bg-gradient-to-br from-violet-500 to-indigo-600 text-white flex items-center justify-center font-bold text-lg shadow-lg shadow-violet-500/25">
-                    {item.step}
-                  </div>
-                  <h4 className="font-semibold text-gray-900 dark:text-white">{item.title}</h4>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">{item.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="mt-16 border-t border-gray-200 dark:border-gray-800 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <p className="text-sm text-gray-500 dark:text-gray-400">
-            PixelVault — All processing happens locally in your browser. No data is ever sent to any
-            server.
+      {files.length === 0 && (
+        <footer className="border-t border-line py-4">
+          <p className="px-4 text-center text-[12px] text-ink-muted">
+            PixelVault — local-only media converter · open source · nothing is ever uploaded
           </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-2">
-            Built with React, Tailwind CSS, and the Canvas API. Open source & privacy-first.
-          </p>
-        </div>
-      </footer>
+        </footer>
+      )}
     </div>
   );
 }
