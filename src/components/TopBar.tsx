@@ -1,4 +1,5 @@
-import { Shield, Github, Moon, Sun, Download } from 'lucide-react';
+import { Github, Moon, Sun, Download } from 'lucide-react';
+import { Logo } from './Logo';
 
 interface TopBarProps {
   darkMode: boolean;
@@ -26,9 +27,7 @@ export function TopBar({
       <div className="mx-auto flex h-full max-w-[1600px] items-center gap-3 px-4">
         {/* Brand */}
         <div className="flex flex-shrink-0 items-center gap-2.5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-md bg-accent shadow-sm">
-            <Shield className="h-4 w-4 text-white" strokeWidth={2.2} />
-          </div>
+          <Logo size={28} />
           <span className="text-sm font-semibold tracking-tight text-ink">PixelVault</span>
           <span className="hidden items-center gap-1.5 rounded-full border border-line px-2 py-0.5 text-[11px] font-medium text-ink-secondary sm:flex">
             <span className="h-1.5 w-1.5 rounded-full bg-success" />
