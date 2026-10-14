@@ -1,13 +1,21 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import { v4 as uuidv4 } from 'uuid';
-import { Download, Trash2, Zap, Lock, Eye, ArrowRight } from 'lucide-react';
+import { Download, Trash2, Zap, Lock, Eye, ArrowRight, Film } from 'lucide-react';
 import { TopBar } from './components/TopBar';
 import { DropZone } from './components/DropZone';
 import { SettingsPanel } from './components/SettingsPanel';
+import { VideoSettingsPanel } from './components/VideoSettingsPanel';
 import { ComparisonSlider } from './components/ComparisonSlider';
 import { Filmstrip } from './components/Filmstrip';
 import { useImageProcessor } from './hooks/useImageProcessor';
-import { ImageFile, ConversionSettings } from './types';
+import { useVideoProcessor } from './hooks/useVideoProcessor';
+import {
+  MediaFile,
+  ConversionSettings,
+  VideoConversionSettings,
+  supportsVideoConversion,
+} from './types';
+import { formatDuration, formatSavings } from './utils/media';
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -23,6 +31,10 @@ function getExtension(format: string): string {
       return '.png';
     case 'image/webp':
       return '.webp';
+    case 'video/mp4':
+      return '.mp4';
+    case 'video/webm':
+      return '.webm';
     default:
       return '.png';
   }
@@ -35,13 +47,14 @@ export default function App() {
     }
     return true;
   });
-  const [files, setFiles] = useState<ImageFile[]>([]);
+  const [files, setFiles] = useState<MediaFile[]>([]);
   const [selectedFileId, setSelectedFileId] = useState<string | null>(null);
   const [originalDimensions, setOriginalDimensions] = useState<{
     width: number;
     height: number;
   } | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [overallProgress, setOverallProgress] = useState(0);
   const [showComparison, setShowComparison] = useState(false);
 
   const [settings, setSettings] = useState<ConversionSettings>({
@@ -52,42 +65,101 @@ export default function App() {
     maintainAspectRatio: true,
   });
 
+  const [videoSettings, setVideoSettings] = useState<VideoConversionSettings>({
+    format: 'mp4',
+    quality: 'medium',
+    width: null,
+    height: null,
+    maintainAspectRatio: true,
+  });
+
+  const abortRef = useRef<AbortController | null>(null);
   const { processImage, getImageDimensions } = useImageProcessor();
+  const { probeVideo, captureThumb, convertVideo } = useVideoProcessor();
 
   // Dark mode effect
   useEffect(() => {
     document.documentElement.classList.toggle('dark', darkMode);
   }, [darkMode]);
 
+  const probeDimensions = useCallback(
+    async (file: File, kind: 'image' | 'video') => {
+      try {
+        if (kind === 'video') return await probeVideo(file);
+        return await getImageDimensions(file);
+      } catch {
+        return null;
+      }
+    },
+    [probeVideo, getImageDimensions]
+  );
+
   const handleFilesSelected = useCallback(
     async (newFiles: File[]) => {
-      const imageFiles: ImageFile[] = [];
+      const isFirstBatch = files.length === 0 && selectedFileId === null;
+      const added: MediaFile[] = [];
 
       for (const file of newFiles) {
         const id = uuidv4();
-        const preview = URL.createObjectURL(file);
-        imageFiles.push({
+        const isVideo = file.type.startsWith('video/');
+        added.push({
           id,
+          kind: isVideo ? 'video' : 'image',
           file,
-          preview,
+          preview: URL.createObjectURL(file),
           name: file.name,
           originalSize: file.size,
           status: 'pending',
+          error:
+            isVideo && !supportsVideoConversion()
+              ? 'Video conversion is not supported in this browser'
+              : undefined,
         });
       }
 
-      setFiles((prev) => [...prev, ...imageFiles]);
-      if (imageFiles.length > 0 && !selectedFileId) {
-        setSelectedFileId(imageFiles[0].id);
-        try {
-          const dims = await getImageDimensions(imageFiles[0].file);
-          setOriginalDimensions(dims);
-        } catch {
-          setOriginalDimensions(null);
-        }
+      setFiles((prev) => [...prev, ...added]);
+
+      // Probe videos asynchronously (dimensions, duration, poster thumb).
+      for (const media of added) {
+        if (media.kind !== 'video') continue;
+        probeVideo(media.file)
+          .then(({ width, height, duration }) => {
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.id === media.id ? { ...f, dimensions: { width, height }, duration } : f
+              )
+            );
+          })
+          .catch(() => {
+            setFiles((prev) =>
+              prev.map((f) =>
+                f.id === media.id && f.status !== 'done'
+                  ? { ...f, status: 'error' as const, error: 'Could not read this video' }
+                  : f
+              )
+            );
+          });
+        captureThumb(media.file)
+          .then((thumb) => {
+            if (thumb) {
+              setFiles((prev) =>
+                prev.map((f) => (f.id === media.id ? { ...f, videoThumb: thumb } : f))
+              );
+            }
+          })
+          .catch(() => {
+            /* poster thumb is cosmetic — leave the film placeholder */
+          });
+      }
+
+      if (isFirstBatch && added.length > 0) {
+        const first = added[0];
+        setSelectedFileId(first.id);
+        const dims = await probeDimensions(first.file, first.kind);
+        setOriginalDimensions(dims);
       }
     },
-    [selectedFileId, getImageDimensions]
+    [files.length, selectedFileId, probeVideo, captureThumb, probeDimensions]
   );
 
   const handleRemoveFile = useCallback(
@@ -96,6 +168,7 @@ export default function App() {
         const file = prev.find((f) => f.id === id);
         if (file) {
           URL.revokeObjectURL(file.preview);
+          if (file.videoThumb) URL.revokeObjectURL(file.videoThumb);
           if (file.processedPreview) {
             URL.revokeObjectURL(file.processedPreview);
           }
@@ -112,13 +185,19 @@ export default function App() {
   );
 
   const handleDownloadFile = useCallback(
-    (file: ImageFile) => {
+    (file: MediaFile) => {
       if (!file.processedBlob) return;
       const url = URL.createObjectURL(file.processedBlob);
       const a = document.createElement('a');
       a.href = url;
       const baseName = file.name.replace(/\.[^.]+$/, '');
-      a.download = `${baseName}_converted${getExtension(settings.format)}`;
+      const ext =
+        file.kind === 'video'
+          ? file.processedBlob.type === 'video/webm'
+            ? '.webm'
+            : '.mp4'
+          : getExtension(settings.format);
+      a.download = `${baseName}_converted${ext}`;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -135,23 +214,51 @@ export default function App() {
       });
   }, [files, handleDownloadFile]);
 
+  const handleCancelProcessing = useCallback(() => {
+    abortRef.current?.abort();
+  }, []);
+
   const handleProcessAll = useCallback(async () => {
+    const controller = new AbortController();
+    abortRef.current = controller;
+    const total = files.length;
+
     setIsProcessing(true);
     setShowComparison(false);
+    setOverallProgress(0);
 
-    for (const file of files) {
+    for (let i = 0; i < total; i++) {
+      if (controller.signal.aborted) break;
+      const file = files[i];
+
       setFiles((prev) =>
-        prev.map((f) => (f.id === file.id ? { ...f, status: 'processing' as const } : f))
+        prev.map((f) =>
+          f.id === file.id ? { ...f, status: 'processing' as const, error: undefined } : f
+        )
       );
 
       try {
-        const result = await processImage(file.file, settings);
+        let result: { blob: Blob; preview: string };
+        if (file.kind === 'video') {
+          result = await convertVideo(file.file, videoSettings, {
+            signal: controller.signal,
+            onProgress: (p) => {
+              setOverallProgress((i + p) / total);
+              setFiles((prev) => prev.map((f) => (f.id === file.id ? { ...f, progress: p } : f)));
+            },
+          });
+        } else {
+          result = await processImage(file.file, settings);
+          setOverallProgress((i + 1) / total);
+        }
+
         setFiles((prev) =>
           prev.map((f) =>
             f.id === file.id
               ? {
                   ...f,
                   status: 'done' as const,
+                  progress: undefined,
                   processedBlob: result.blob,
                   processedPreview: result.preview,
                   processedSize: result.blob.size,
@@ -159,16 +266,32 @@ export default function App() {
               : f
           )
         );
-      } catch {
+      } catch (err) {
+        const canceled = controller.signal.aborted;
         setFiles((prev) =>
-          prev.map((f) => (f.id === file.id ? { ...f, status: 'error' as const } : f))
+          prev.map((f) =>
+            f.id === file.id
+              ? {
+                  ...f,
+                  status: canceled ? ('pending' as const) : ('error' as const),
+                  progress: undefined,
+                  error: canceled
+                    ? undefined
+                    : err instanceof Error
+                      ? err.message
+                      : 'Conversion failed',
+                }
+              : f
+          )
         );
+        if (canceled) break;
       }
     }
 
+    abortRef.current = null;
     setIsProcessing(false);
-    setShowComparison(true);
-  }, [files, settings, processImage]);
+    if (!controller.signal.aborted) setShowComparison(true);
+  }, [files, settings, videoSettings, processImage, convertVideo]);
 
   const handleSelectFile = useCallback(
     async (id: string) => {
@@ -176,20 +299,20 @@ export default function App() {
       setShowComparison(false);
       const file = files.find((f) => f.id === id);
       if (file) {
-        try {
-          const dims = await getImageDimensions(file.file);
+        setOriginalDimensions(file.dimensions ?? null);
+        if (!file.dimensions) {
+          const dims = await probeDimensions(file.file, file.kind);
           setOriginalDimensions(dims);
-        } catch {
-          setOriginalDimensions(null);
         }
       }
     },
-    [files, getImageDimensions]
+    [files, probeDimensions]
   );
 
   const handleClearAll = useCallback(() => {
     files.forEach((f) => {
       URL.revokeObjectURL(f.preview);
+      if (f.videoThumb) URL.revokeObjectURL(f.videoThumb);
       if (f.processedPreview) URL.revokeObjectURL(f.processedPreview);
     });
     setFiles([]);
@@ -199,6 +322,7 @@ export default function App() {
   }, [files]);
 
   const selectedFile = files.find((f) => f.id === selectedFileId);
+  const isVideoSelected = selectedFile?.kind === 'video';
   const processedCount = files.filter((f) => f.status === 'done').length;
   const totalOriginalSize = files.reduce((sum, f) => sum + f.originalSize, 0);
   const totalProcessedSize = files.reduce((sum, f) => sum + (f.processedSize || 0), 0);
@@ -215,6 +339,7 @@ export default function App() {
             ? {
                 fileName: selectedFile.name,
                 dimensions: originalDimensions,
+                duration: selectedFile.duration,
                 savings: totalSavings,
                 hasResults: processedCount > 0,
               }
@@ -222,6 +347,9 @@ export default function App() {
         }
         processedCount={processedCount}
         onDownloadAll={handleDownloadAll}
+        isProcessing={isProcessing}
+        processingLabel={`Converting ${Math.round(overallProgress * 100)}%`}
+        onCancelProcessing={handleCancelProcessing}
       />
 
       {files.length === 0 ? (
@@ -230,7 +358,7 @@ export default function App() {
           <div className="w-full max-w-xl space-y-6 py-12">
             <div className="space-y-2 text-center">
               <h2 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                Convert images. <span className="text-accent">Privately.</span>
+                Convert media. <span className="text-accent">Privately.</span>
               </h2>
               <p className="mx-auto max-w-md text-[13px] text-ink-secondary">
                 Everything runs in this browser tab — your files never leave your device.
@@ -264,28 +392,36 @@ export default function App() {
             aria-label="Conversion settings"
           >
             <section className="rounded-lg border border-line bg-surface-raised p-4">
-              <SettingsPanel
-                settings={settings}
-                onSettingsChange={setSettings}
-                originalDimensions={originalDimensions}
-              />
+              {isVideoSelected ? (
+                <VideoSettingsPanel
+                  settings={videoSettings}
+                  onSettingsChange={setVideoSettings}
+                  originalDimensions={originalDimensions}
+                />
+              ) : (
+                <SettingsPanel
+                  settings={settings}
+                  onSettingsChange={setSettings}
+                  originalDimensions={originalDimensions}
+                />
+              )}
             </section>
 
             <div className="flex gap-2">
               <button
                 onClick={handleProcessAll}
-                disabled={isProcessing}
+                disabled={isProcessing || files.every((f) => f.status === 'error')}
                 className="flex h-10 flex-1 items-center justify-center gap-2 rounded-md bg-accent text-[13px] font-semibold text-white shadow-sm transition-all hover:bg-accent-strong active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isProcessing ? (
                   <>
                     <div className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
-                    Processing…
+                    Converting {Math.round(overallProgress * 100)}%
                   </>
                 ) : (
                   <>
                     <Zap className="h-4 w-4" />
-                    Convert {files.length} image{files.length > 1 ? 's' : ''}
+                    Convert {files.length} file{files.length > 1 ? 's' : ''}
                   </>
                 )}
               </button>
@@ -316,7 +452,9 @@ export default function App() {
                   </div>
                   <div className="flex justify-between border-t border-line pt-1.5">
                     <dt className="text-ink-secondary">Saved</dt>
-                    <dd className="text-[15px] font-bold text-success">−{totalSavings}%</dd>
+                    <dd className="text-[15px] font-bold text-success">
+                      {formatSavings(totalSavings)}
+                    </dd>
                   </div>
                 </dl>
               </section>
@@ -325,8 +463,41 @@ export default function App() {
 
           {/* Canvas + info + filmstrip */}
           <div className="animate-fade-in order-1 flex min-w-0 flex-1 flex-col gap-3 lg:order-2">
-            <section className="checkerboard flex min-h-[280px] flex-1 items-center justify-center overflow-hidden rounded-lg border border-line bg-canvas lg:min-h-0">
-              {selectedFile && showComparison && selectedFile.processedPreview ? (
+            <section className="checkerboard flex min-h-[280px] flex-1 flex-col items-center justify-center overflow-hidden rounded-lg border border-line bg-canvas lg:min-h-0">
+              {selectedFile && selectedFile.kind === 'video' ? (
+                <>
+                  {selectedFile.processedPreview && (
+                    <div className="flex flex-shrink-0 gap-1 rounded-md border border-line bg-surface p-1">
+                      {(['original', 'converted'] as const).map((view) => {
+                        const active = view === 'converted' ? showComparison : !showComparison;
+                        return (
+                          <button
+                            key={view}
+                            onClick={() => setShowComparison(view === 'converted')}
+                            className={`rounded px-2.5 py-1 text-[12px] font-medium capitalize transition-colors ${
+                              active
+                                ? 'bg-accent text-white shadow-sm'
+                                : 'text-ink-secondary hover:bg-surface-overlay hover:text-ink'
+                            }`}
+                          >
+                            {view}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <video
+                    key={showComparison && selectedFile.processedPreview ? 'converted' : 'original'}
+                    src={
+                      showComparison && selectedFile.processedPreview
+                        ? selectedFile.processedPreview
+                        : selectedFile.preview
+                    }
+                    controls
+                    className="min-h-0 max-h-full w-auto max-w-full object-contain p-2"
+                  />
+                </>
+              ) : selectedFile && showComparison && selectedFile.processedPreview ? (
                 <div className="w-full p-2">
                   <ComparisonSlider
                     beforeSrc={selectedFile.preview}
@@ -342,7 +513,7 @@ export default function App() {
                   className="max-h-full max-w-full object-contain p-2"
                 />
               ) : (
-                <p className="text-[13px] text-ink-muted">Select an image to preview</p>
+                <p className="text-[13px] text-ink-muted">Select a file to preview</p>
               )}
             </section>
 
@@ -350,13 +521,19 @@ export default function App() {
             {selectedFile && (
               <div className="tool flex flex-wrap items-center justify-between gap-2 text-[12px]">
                 <div className="flex min-w-0 items-center gap-2 text-ink-muted">
+                  {selectedFile.kind === 'video' && <Film className="h-3.5 w-3.5 flex-shrink-0" />}
                   <span className="max-w-[220px] truncate font-medium text-ink">
                     {selectedFile.name}
                   </span>
                   {originalDimensions && (
                     <span className="flex-shrink-0">
                       {originalDimensions.width}×{originalDimensions.height}
+                      {formatDuration(selectedFile.duration) &&
+                        ` · ${formatDuration(selectedFile.duration)}`}
                     </span>
+                  )}
+                  {selectedFile.status === 'error' && selectedFile.error && (
+                    <span className="flex-shrink-0 text-red-500">{selectedFile.error}</span>
                   )}
                 </div>
                 <div className="flex items-center gap-2 text-ink-muted">

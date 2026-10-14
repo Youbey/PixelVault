@@ -1,13 +1,14 @@
 import { useCallback, useRef, useState } from 'react';
-import { X, Loader2, AlertCircle, Download, Plus } from 'lucide-react';
-import { ImageFile } from '../types';
+import { X, Loader2, AlertCircle, Download, Plus, Film } from 'lucide-react';
+import { MediaFile } from '../types';
+import { ACCEPTED_TYPES, formatDuration, formatSavings, isAccepted } from '../utils/media';
 
 interface FilmstripProps {
-  files: ImageFile[];
+  files: MediaFile[];
   selectedFileId: string | null;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
-  onDownload: (file: ImageFile) => void;
+  onDownload: (file: MediaFile) => void;
   onAddFiles: (files: File[]) => void;
 }
 
@@ -24,9 +25,7 @@ export function Filmstrip({
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const newFiles = Array.from(e.target.files || []).filter((file) =>
-        file.type.startsWith('image/')
-      );
+      const newFiles = Array.from(e.target.files || []).filter(isAccepted);
       if (newFiles.length > 0) {
         onAddFiles(newFiles);
       }
@@ -51,9 +50,7 @@ export function Filmstrip({
       onDrop={(e) => {
         e.preventDefault();
         setIsDragOver(false);
-        const newFiles = Array.from(e.dataTransfer.files).filter((file) =>
-          file.type.startsWith('image/')
-        );
+        const newFiles = Array.from(e.dataTransfer.files).filter(isAccepted);
         if (newFiles.length > 0) {
           onAddFiles(newFiles);
         }
@@ -64,6 +61,7 @@ export function Filmstrip({
           ? Math.round((1 - file.processedSize / file.originalSize) * 100)
           : 0;
         const isSelected = file.id === selectedFileId;
+        const duration = formatDuration(file.duration);
 
         return (
           <div key={file.id} className="group/card flex w-[88px] flex-shrink-0 flex-col gap-1">
@@ -76,17 +74,34 @@ export function Filmstrip({
               } ${file.status === 'error' ? 'border-red-500/60' : ''}`}
               title={file.name}
             >
-              <img
-                src={file.preview}
-                alt={file.name}
-                className="h-full w-full object-cover"
-                draggable={false}
-              />
+              {file.kind === 'video' && !file.videoThumb ? (
+                <span className="flex h-full w-full items-center justify-center bg-surface-overlay text-ink-muted">
+                  <Film className="h-5 w-5" />
+                </span>
+              ) : (
+                <img
+                  src={file.kind === 'video' ? file.videoThumb : file.preview}
+                  alt={file.name}
+                  className="h-full w-full object-cover"
+                  draggable={false}
+                />
+              )}
+
+              {file.kind === 'video' && duration && (
+                <span className="absolute bottom-1 right-1 rounded bg-black/70 px-1 py-px text-[10px] font-medium text-white">
+                  {duration}
+                </span>
+              )}
 
               {/* Status indicators */}
               {file.status === 'processing' && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                <div className="absolute inset-0 flex flex-col items-center justify-center gap-1 bg-black/40">
                   <Loader2 className="h-4 w-4 animate-spin text-white" />
+                  {file.kind === 'video' && file.progress !== undefined && (
+                    <span className="text-[10px] font-semibold text-white">
+                      {Math.round(file.progress * 100)}%
+                    </span>
+                  )}
                 </div>
               )}
               {file.status === 'error' && (
@@ -96,7 +111,7 @@ export function Filmstrip({
               )}
               {file.status === 'done' && savings > 0 && (
                 <span className="absolute bottom-1 left-1 rounded bg-success/90 px-1 py-px text-[10px] font-semibold text-black">
-                  −{savings}%
+                  {formatSavings(savings)}
                 </span>
               )}
 
@@ -162,7 +177,7 @@ export function Filmstrip({
               ? 'border-accent bg-accent/10 text-accent'
               : 'border-line text-ink-muted hover:border-ink-muted hover:text-ink-secondary'
           }`}
-          title="Add more images"
+          title="Add more media"
         >
           <Plus className="h-5 w-5" />
         </button>
@@ -170,7 +185,7 @@ export function Filmstrip({
         <input
           ref={inputRef}
           type="file"
-          accept="image/*"
+          accept={ACCEPTED_TYPES}
           multiple
           onChange={handleFileInput}
           className="hidden"
