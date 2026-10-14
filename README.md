@@ -1,32 +1,34 @@
 # PixelVault — Privacy-First Media Converter
 
-**Zero-knowledge image processing. All conversion happens locally in your browser. Your files never leave your device.**
+**Zero-knowledge media processing. All conversion happens locally in your browser. Your files never leave your device.**
 
 ## Overview
 
-PixelVault is a privacy-first image conversion tool to convert, compress, and optimize images locally in your browser (Canvas API, no server uploads).
+PixelVault is a privacy-first media conversion tool to convert, compress, and optimize images and videos locally in your browser (Canvas API + WebCodecs, no server uploads).
 
-**Current state:** Image Suite MVP — conversion, compression, resize, batch processing, before/after comparison.
+**Current state:** Image Suite MVP + video conversion (Phase 2a) — conversion, compression, resize, batch processing, before/after comparison.
 
 ## Key Features
 
 - **100% local processing** — no server uploads, no tracking, no analytics.
-- **Format conversion** — JPG / PNG / WebP.
+- **Format conversion** — JPG / PNG / WebP for images; MP4 (H.264) / WebM (VP9) for videos.
 - **Compression** — adjustable quality, up to ~80% size reduction.
-- **Resize** — custom dimensions, aspect-ratio lock, quick presets.
-- **Batch processing** — convert many images, download individually or all.
+- **Resize** — custom dimensions, aspect-ratio lock, quick presets (images) and 1080p/720p/480p scale presets (videos).
+- **Batch processing** — convert many files (images and videos mixed), download individually or all.
+- **Video conversion** — GPU-accelerated via WebCodecs (hardware encoders with automatic software fallback), live per-file progress, cancel anytime.
 - **Before/after comparison** — slider preview + savings stats.
 
 ## Technology Stack
 
-| Component    | Version  |
-| ------------ | -------- |
-| React        | ^18.2.0  |
-| TypeScript   | ^5.7.0   |
-| Vite         | ^6.3.5   |
-| Tailwind CSS | ^4.1.7   |
-| Lucide React | ^0.294.0 |
-| UUID         | ^9.0.1   |
+| Component    | Version  | Notes                                        |
+| ------------ | -------- | -------------------------------------------- |
+| React        | ^18.2.0  |                                              |
+| TypeScript   | ^5.7.0   |                                              |
+| Vite         | ^6.3.5   |                                              |
+| Tailwind CSS | ^4.1.7   |                                              |
+| Mediabunny   | ^1.61.4  | Video conversion engine (WebCodecs, bundled) |
+| Lucide React | ^0.294.0 |                                              |
+| UUID         | ^9.0.1   |                                              |
 
 ## Live Demo
 
@@ -120,12 +122,15 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Feature requests and bugs via GitHub Iss
 ## Roadmap
 
 - Phase 1 (done): JPG/PNG/WebP convert, resize/crop, compress.
-- Phase 2 (next): video/audio trim + convert (MP4/MOV, WAV/MP3).
+- Phase 2a (this release): video convert/compress/scale (MP4/WebM in → MP4/WebM out, MOV/MKV accepted).
+- Phase 2b (next): video/audio trim + audio conversion (WAV/MP3).
 - Phase 3 (later): PDF merge/split, enhancements.
 
 ## Browser Support
 
 Chrome 90+, Firefox 88+, Safari 14+, Edge 90+. Mobile: Chrome on Android, Safari on iOS.
+
+Video conversion additionally needs the WebCodecs API: Chrome 94+, Safari 16.4+, Firefox 130+ (image features keep the wider range above).
 
 ## License
 

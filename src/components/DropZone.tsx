@@ -1,5 +1,6 @@
 import { useCallback, useState } from 'react';
 import { Upload, ImagePlus } from 'lucide-react';
+import { ACCEPTED_TYPES, isAccepted } from '../utils/media';
 
 interface DropZoneProps {
   onFilesSelected: (files: File[]) => void;
@@ -23,9 +24,7 @@ export function DropZone({ onFilesSelected }: DropZoneProps) {
       e.preventDefault();
       setIsDragOver(false);
 
-      const files = Array.from(e.dataTransfer.files).filter((file) =>
-        file.type.startsWith('image/')
-      );
+      const files = Array.from(e.dataTransfer.files).filter(isAccepted);
 
       if (files.length > 0) {
         onFilesSelected(files);
@@ -36,9 +35,7 @@ export function DropZone({ onFilesSelected }: DropZoneProps) {
 
   const handleFileInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
-      const files = Array.from(e.target.files || []).filter((file) =>
-        file.type.startsWith('image/')
-      );
+      const files = Array.from(e.target.files || []).filter(isAccepted);
       if (files.length > 0) {
         onFilesSelected(files);
       }
@@ -63,7 +60,7 @@ export function DropZone({ onFilesSelected }: DropZoneProps) {
     >
       <input
         type="file"
-        accept="image/*"
+        accept={ACCEPTED_TYPES}
         multiple
         onChange={handleFileInput}
         className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
@@ -85,11 +82,11 @@ export function DropZone({ onFilesSelected }: DropZoneProps) {
 
         <div>
           <p className="text-base font-medium text-ink">
-            {isDragOver ? 'Drop to add' : 'Drag & drop images'}
+            {isDragOver ? 'Drop to add' : 'Drag & drop media'}
           </p>
           <p className="mt-1 text-[13px] text-ink-muted">
             or <span className="text-accent underline-offset-2 hover:underline">browse</span> — JPG,
-            PNG, WebP, AVIF, GIF, BMP
+            PNG, WebP, AVIF · MP4, WebM, MOV, MKV
           </p>
         </div>
       </div>

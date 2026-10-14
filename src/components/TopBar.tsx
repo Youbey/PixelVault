@@ -1,5 +1,6 @@
-import { Github, Moon, Sun, Download } from 'lucide-react';
+import { Github, Moon, Sun, Download, X } from 'lucide-react';
 import { Logo } from './Logo';
+import { formatDuration, formatSavings } from '../utils/media';
 
 interface TopBarProps {
   darkMode: boolean;
@@ -8,11 +9,17 @@ interface TopBarProps {
   context: {
     fileName: string;
     dimensions: { width: number; height: number } | null;
+    /** Video duration in seconds; undefined for images. */
+    duration?: number;
     savings: number;
     hasResults: boolean;
   } | null;
   processedCount: number;
   onDownloadAll: () => void;
+  isProcessing?: boolean;
+  /** Progress text shown next to the spinner while converting (e.g. "2/3 · 45%"). */
+  processingLabel?: string;
+  onCancelProcessing?: () => void;
 }
 
 export function TopBar({
@@ -21,6 +28,9 @@ export function TopBar({
   context,
   processedCount,
   onDownloadAll,
+  isProcessing = false,
+  processingLabel,
+  onCancelProcessing,
 }: TopBarProps) {
   return (
     <header className="sticky top-0 z-50 h-14 border-b border-line bg-surface-raised/90 backdrop-blur">
@@ -44,11 +54,12 @@ export function TopBar({
               {context.dimensions && (
                 <span className="flex-shrink-0 text-ink-muted">
                   {context.dimensions.width}×{context.dimensions.height}
+                  {formatDuration(context.duration) && ` · ${formatDuration(context.duration)}`}
                 </span>
               )}
               {context.hasResults && context.savings > 0 && (
                 <span className="flex-shrink-0 rounded bg-success/10 px-1.5 py-0.5 text-[11px] font-semibold text-success">
-                  −{context.savings}%
+                  {formatSavings(context.savings)}
                 </span>
               )}
             </div>
@@ -56,6 +67,29 @@ export function TopBar({
         )}
 
         <div className="flex-1" />
+
+        {/* Processing indicator + cancel */}
+        {isProcessing && (
+          <div className="flex items-center gap-2 rounded-md border border-accent/30 bg-accent/10 px-2.5 py-1.5 text-[13px] font-medium text-accent">
+            <span className="h-3.5 w-3.5 flex-shrink-0 animate-spin rounded-full border-2 border-accent/30 border-t-accent" />
+            <span className="hidden whitespace-nowrap sm:inline">
+              {processingLabel || 'Converting…'}
+            </span>
+            {onCancelProcessing && (
+              <span
+                role="button"
+                tabIndex={0}
+                onClick={onCancelProcessing}
+                onKeyDown={(e) => e.key === 'Enter' && onCancelProcessing()}
+                className="ml-0.5 flex h-5 w-5 cursor-pointer items-center justify-center rounded hover:bg-accent/20"
+                title="Cancel conversion"
+                aria-label="Cancel conversion"
+              >
+                <X className="h-3.5 w-3.5" />
+              </span>
+            )}
+          </div>
+        )}
 
         {/* Actions */}
         {processedCount > 0 && (
