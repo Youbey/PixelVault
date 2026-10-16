@@ -6,7 +6,7 @@
 
 PixelVault is a privacy-first media conversion tool to convert, compress, and optimize images and videos locally in your browser (Canvas API + WebCodecs, no server uploads).
 
-**Current state:** Image Suite MVP + video conversion (Phase 2a) — conversion, compression, resize, batch processing, before/after comparison.
+**Current state:** Image Suite MVP + video conversion (Phase 2a) + speech-to-text transcription (Phase 2c) — conversion, compression, resize, batch processing, before/after comparison, in-browser transcription.
 
 ## Key Features
 
@@ -17,18 +17,20 @@ PixelVault is a privacy-first media conversion tool to convert, compress, and op
 - **Batch processing** — convert many files (images and videos mixed), download individually or all.
 - **Video conversion** — GPU-accelerated via WebCodecs (hardware encoders with automatic software fallback), live per-file progress, cancel anytime.
 - **Before/after comparison** — slider preview + savings stats.
+- **Speech-to-text** — transcribe audio/video files or mic recordings entirely in your browser (Whisper tiny.en, English). The ~45 MB model ships with PixelVault itself — no third-party requests, ever; copy or export .txt/.srt with timestamps.
 
 ## Technology Stack
 
-| Component    | Version  | Notes                                        |
-| ------------ | -------- | -------------------------------------------- |
-| React        | ^18.2.0  |                                              |
-| TypeScript   | ^5.7.0   |                                              |
-| Vite         | ^6.3.5   |                                              |
-| Tailwind CSS | ^4.1.7   |                                              |
-| Mediabunny   | ^1.61.4  | Video conversion engine (WebCodecs, bundled) |
-| Lucide React | ^0.294.0 |                                              |
-| UUID         | ^11.0.0  |                                              |
+| Component       | Version  | Notes                                        |
+| --------------- | -------- | -------------------------------------------- |
+| React           | ^18.2.0  |                                              |
+| TypeScript      | ^5.7.0   |                                              |
+| Vite            | ^6.3.5   |                                              |
+| Tailwind CSS    | ^4.1.7   |                                              |
+| Mediabunny      | ^1.61.4  | Video conversion engine (WebCodecs, bundled) |
+| Transformers.js | ^4.3.1   | Whisper inference (local wasm, no CDN)       |
+| Lucide React    | ^0.294.0 |                                              |
+| UUID            | ^11.0.0  |                                              |
 
 ## Live Demo
 
@@ -114,8 +116,11 @@ Setup once in GitHub: Settings → Pages → Source: **GitHub Actions**. Site: `
 
 ## Privacy Policy
 
-- No tracking, no analytics, no server communication.
-- Only conversion state in memory; object URLs revoked after use.
+- No tracking, no analytics. Your files, recordings, and transcripts never leave your device.
+- No server communication: the app makes no requests beyond loading PixelVault itself. The
+  Whisper speech-model weights (~45 MB) ship with the app as first-party assets served from
+  this site — nothing is ever fetched from Hugging Face, a CDN, or any other third party.
+- Everything runs in this browser tab; object URLs revoked after use.
 
 ## Contributing
 
@@ -126,7 +131,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Feature requests and bugs via GitHub Iss
 - Phase 1 (done): JPG/PNG/WebP convert, resize/crop, compress.
 - Phase 2a (this release): video convert/compress/scale (MP4/WebM in → MP4/WebM out, MOV/MKV accepted).
 - Phase 2b (next): video/audio trim + audio conversion (WAV/MP3).
-- Phase 2c (planned): in-browser speech-to-text transcription (Phonon-2, English) — one-time consented model download, offline thereafter.
+- Phase 2c (this release): in-browser speech-to-text transcription (Whisper tiny.en, English) — model bundled with the app, zero third-party requests.
 - Phase 3 (later): PDF merge/split, enhancements.
 
 ## Browser Support
@@ -134,6 +139,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Feature requests and bugs via GitHub Iss
 Chrome 90+, Firefox 88+, Safari 14+, Edge 90+. Mobile: Chrome on Android, Safari on iOS.
 
 Video conversion additionally needs the WebCodecs API: Chrome 94+, Safari 16.4+, Firefox 130+ (image features keep the wider range above).
+
+Transcription needs WebAssembly (all listed browsers) and is dramatically faster with WebGPU (Chrome/Edge); Firefox/Safari fall back to single-threaded WASM — expect slower transcription. Best on desktop.
 
 ## License
 

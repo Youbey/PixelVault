@@ -9,3 +9,5 @@ coverage/
 .vite/
 .zcode/
 .zcodeignore
+.mimocode/
+output/

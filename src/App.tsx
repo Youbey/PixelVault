@@ -7,15 +7,22 @@ import { SettingsPanel } from './components/SettingsPanel';
 import { VideoSettingsPanel } from './components/VideoSettingsPanel';
 import { ComparisonSlider } from './components/ComparisonSlider';
 import { Filmstrip } from './components/Filmstrip';
+import { TranscriptPanel } from './components/TranscriptPanel';
 import { useImageProcessor } from './hooks/useImageProcessor';
 import { useVideoProcessor } from './hooks/useVideoProcessor';
+import { useTranscriber } from './hooks/useTranscriber';
+import { useRecorder } from './hooks/useRecorder';
 import {
+  AppView,
   MediaFile,
   ConversionSettings,
+  ModelState,
+  TranscriptItem,
   VideoConversionSettings,
   supportsVideoConversion,
 } from './types';
 import { formatDuration, formatSavings } from './utils/media';
+import { formatTranscriptSrt, formatTranscriptTxt } from './utils/transcript';
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -76,6 +83,18 @@ export default function App() {
   const abortRef = useRef<AbortController | null>(null);
   const { processImage, getImageDimensions } = useImageProcessor();
   const { probeVideo, captureThumb, convertVideo } = useVideoProcessor();
+
+  /* ── Transcription ─────────────────────────────────────────────── */
+  const [view, setView] = useState<AppView>('convert');
+  const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
+  const [selectedTranscriptId, setSelectedTranscriptId] = useState<string | null>(null);
+  const [model, setModel] = useState<ModelState>({
+    status: 'idle',
+    loadedBytes: 0,
+    totalBytes: 0,
+  });
+  const transcriptAbortRef = useRef(new Map<string, AbortController>());
+  const { loadModel, unloadModel, transcribe } = useTranscriber();
 
   // Dark mode effect
   useEffect(() => {
@@ -321,7 +340,226 @@ export default function App() {
     setShowComparison(false);
   }, [files]);
 
+  /* ── Transcription handlers ────────────────────────────────────── */
+
+  const handleToggleView = useCallback(() => {
+    setView((v) => (v === 'convert' ? 'transcribe' : 'convert'));
+  }, []);
+
+  const handleLoadModel = useCallback(() => {
+    setModel((prev) => ({
+      ...prev,
+      status: 'loading',
+      loadedBytes: 0,
+      totalBytes: 0,
+      stage: 'fetching',
+      backend: undefined,
+      error: undefined,
+    }));
+    loadModel({
+      onProgress: (p) => setModel((prev) => ({ ...prev, ...p })),
+    })
+      .then((r) =>
+        setModel((prev) => ({
+          ...prev,
+          status: 'ready',
+          backend: r.backend,
+          error: undefined,
+        }))
+      )
+      .catch((err: unknown) =>
+        setModel((prev) => ({
+          ...prev,
+          status: 'error',
+          error: err instanceof Error ? err.message : String(err),
+        }))
+      );
+  }, [loadModel]);
+
+  const handleUnloadModel = useCallback(() => {
+    void unloadModel().then(() =>
+      setModel({
+        status: 'idle',
+        loadedBytes: 0,
+        totalBytes: 0,
+      })
+    );
+  }, [unloadModel]);
+
+  const addTranscriptItem = useCallback(
+    (file: File, source: 'file' | 'recording'): TranscriptItem => {
+      const playable = source === 'recording' || file.type.startsWith('audio/');
+      return {
+        id: uuidv4(),
+        name: file.name,
+        source,
+        file,
+        preview: playable ? URL.createObjectURL(file) : undefined,
+        status: 'pending',
+      };
+    },
+    []
+  );
+
+  const handleAddTranscriptFiles = useCallback(
+    (newFiles: File[]) => {
+      const added = newFiles.map((f) => addTranscriptItem(f, 'file'));
+      if (added.length === 0) return;
+      setTranscripts((prev) => [...prev, ...added]);
+      setSelectedTranscriptId((prev) => prev ?? added[0].id);
+    },
+    [addTranscriptItem]
+  );
+
+  const handleRecordComplete = useCallback(
+    (file: File) => {
+      const item = addTranscriptItem(file, 'recording');
+      setTranscripts((prev) => [...prev, item]);
+      setSelectedTranscriptId(item.id);
+    },
+    [addTranscriptItem]
+  );
+
+  const recorder = useRecorder(handleRecordComplete);
+
+  const startTranscribe = useCallback(
+    (item: TranscriptItem) => {
+      if (model.status !== 'ready') return;
+      const controller = new AbortController();
+      transcriptAbortRef.current.set(item.id, controller);
+      setTranscripts((prev) =>
+        prev.map((t) =>
+          t.id === item.id
+            ? {
+                ...t,
+                status: 'preparing',
+                progress: 0,
+                error: undefined,
+                partialText: undefined,
+                text: undefined,
+                words: undefined,
+              }
+            : t
+        )
+      );
+      void transcribe(item.id, item.file, {
+        signal: controller.signal,
+        onProgress: (p) =>
+          setTranscripts((prev) =>
+            prev.map((t) =>
+              t.id === item.id
+                ? {
+                    ...t,
+                    status: p.phase === 'decoding' ? 'processing' : t.status,
+                    progress: p.progress,
+                  }
+                : t
+            )
+          ),
+        onPartial: (text) =>
+          setTranscripts((prev) =>
+            prev.map((t) => (t.id === item.id ? { ...t, partialText: text } : t))
+          ),
+        onResult: (r) =>
+          setTranscripts((prev) =>
+            prev.map((t) =>
+              t.id === item.id
+                ? {
+                    ...t,
+                    status: 'done',
+                    progress: 1,
+                    partialText: undefined,
+                    text: r.text,
+                    words: r.words,
+                    duration: r.duration,
+                  }
+                : t
+            )
+          ),
+        onError: (message, canceled) =>
+          setTranscripts((prev) =>
+            prev.map((t) =>
+              t.id === item.id
+                ? {
+                    ...t,
+                    status: canceled ? 'pending' : 'error',
+                    progress: undefined,
+                    partialText: undefined,
+                    error: canceled ? undefined : message,
+                  }
+                : t
+            )
+          ),
+      }).finally(() => {
+        transcriptAbortRef.current.delete(item.id);
+      });
+    },
+    [model.status, transcribe]
+  );
+
+  const handleTranscribeItem = useCallback(
+    (id: string) => {
+      const item = transcripts.find((t) => t.id === id);
+      if (item) startTranscribe(item);
+    },
+    [transcripts, startTranscribe]
+  );
+
+  const handleCancelTranscribe = useCallback((id: string) => {
+    transcriptAbortRef.current.get(id)?.abort();
+  }, []);
+
+  const handleRemoveTranscript = useCallback((id: string) => {
+    transcriptAbortRef.current.get(id)?.abort();
+    setTranscripts((prev) => {
+      const target = prev.find((t) => t.id === id);
+      if (target?.preview) URL.revokeObjectURL(target.preview);
+      return prev.filter((t) => t.id !== id);
+    });
+    setSelectedTranscriptId((prev) => (prev === id ? null : prev));
+  }, []);
+
+  const handleCopyTranscript = useCallback(
+    (id: string) => {
+      const item = transcripts.find((t) => t.id === id);
+      if (item?.text && navigator.clipboard?.writeText) {
+        void navigator.clipboard.writeText(item.text);
+      }
+    },
+    [transcripts]
+  );
+
+  const handleDownloadTranscript = useCallback(
+    (id: string, fmt: 'txt' | 'srt') => {
+      const item = transcripts.find((t) => t.id === id);
+      if (!item) return;
+      const content = fmt === 'txt' ? formatTranscriptTxt(item) : formatTranscriptSrt(item);
+      if (!content) return;
+      const blob = new Blob([content], {
+        type: fmt === 'txt' ? 'text/plain;charset=utf-8' : 'application/x-subrip;charset=utf-8',
+      });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${item.name.replace(/\.[^.]+$/, '')}_transcript.${fmt}`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+    [transcripts]
+  );
+
   const selectedFile = files.find((f) => f.id === selectedFileId);
+
+  const handleTranscribeSelectedVideo = useCallback(() => {
+    if (!selectedFile || selectedFile.kind !== 'video') return;
+    const item = addTranscriptItem(selectedFile.file, 'file');
+    setTranscripts((prev) => [...prev, item]);
+    setSelectedTranscriptId(item.id);
+    setView('transcribe');
+    if (model.status === 'ready') startTranscribe(item);
+  }, [selectedFile, addTranscriptItem, model.status, startTranscribe]);
   const isVideoSelected = selectedFile?.kind === 'video';
   const processedCount = files.filter((f) => f.status === 'done').length;
   const totalOriginalSize = files.reduce((sum, f) => sum + f.originalSize, 0);
@@ -350,9 +588,43 @@ export default function App() {
         isProcessing={isProcessing}
         processingLabel={`Converting ${Math.round(overallProgress * 100)}%`}
         onCancelProcessing={handleCancelProcessing}
+        transcribeView={{
+          active: view === 'transcribe',
+          count: transcripts.length,
+          onToggle: handleToggleView,
+        }}
       />
 
-      {files.length === 0 ? (
+      {view === 'transcribe' ? (
+        /* ── Transcription workspace ────────────────────────────────── */
+        <main className="mx-auto flex w-full max-w-[1600px] flex-1 flex-col p-4 lg:h-[calc(100vh-3.5rem)] lg:overflow-hidden">
+          <TranscriptPanel
+            model={model}
+            onLoadModel={handleLoadModel}
+            onUnloadModel={handleUnloadModel}
+            items={transcripts}
+            selectedId={selectedTranscriptId}
+            onAddFiles={handleAddTranscriptFiles}
+            onSelect={setSelectedTranscriptId}
+            onRemove={handleRemoveTranscript}
+            onTranscribe={handleTranscribeItem}
+            onCancelTranscribe={handleCancelTranscribe}
+            onDownload={handleDownloadTranscript}
+            onCopy={handleCopyTranscript}
+            recorder={{
+              isRecording: recorder.isRecording,
+              elapsedMs: recorder.elapsedMs,
+              error: recorder.error,
+              onStart: () => void recorder.start(),
+              onStop: recorder.stop,
+            }}
+            selectedVideo={
+              selectedFile && selectedFile.kind === 'video' ? { name: selectedFile.name } : null
+            }
+            onTranscribeSelectedVideo={handleTranscribeSelectedVideo}
+          />
+        </main>
+      ) : files.length === 0 ? (
         /* ── Empty state: hero + drop zone ─────────────────────────── */
         <main className="flex flex-1 items-center justify-center px-4">
           <div className="w-full max-w-xl space-y-6 py-12">

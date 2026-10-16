@@ -48,3 +48,65 @@ export interface VideoConversionSettings {
 export function supportsVideoConversion(): boolean {
   return typeof VideoEncoder !== 'undefined' && typeof VideoDecoder !== 'undefined';
 }
+
+/* ── Transcription ──────────────────────────────────────────────────── */
+
+export type AppView = 'convert' | 'transcribe';
+
+export type TranscriptStatus = 'pending' | 'preparing' | 'processing' | 'done' | 'error';
+
+export interface TranscriptWord {
+  text: string;
+  /** Start time in seconds, relative to source audio start. */
+  start: number;
+}
+
+export interface TranscriptItem {
+  id: string;
+  name: string;
+  source: 'file' | 'recording';
+  file: File;
+  /** Object URL for playable sources (audio files, recordings); revoked on remove. */
+  preview?: string;
+  /** Audio duration in seconds, known after preparation. */
+  duration?: number;
+  status: TranscriptStatus;
+  /** 0–1: preparing = 0–0.1, decoding = 0.1–1. */
+  progress?: number;
+  /** Progressive decode output while chunking through the audio. */
+  partialText?: string;
+  text?: string;
+  words?: TranscriptWord[];
+  error?: string;
+}
+
+export type ModelStatus = 'idle' | 'loading' | 'ready' | 'error';
+
+export interface ModelState {
+  status: ModelStatus;
+  loadedBytes: number;
+  totalBytes: number;
+  /** Sub-phase while status is 'loading'. */
+  stage?: 'fetching' | 'initializing';
+  backend?: 'webgpu' | 'wasm';
+  error?: string;
+}
+
+/** Messages main thread → ASR worker. */
+export type AsrWorkerRequest =
+  | { type: 'load' }
+  | { type: 'transcribe'; id: string; pcm: Float32Array; sampleRate: number }
+  | { type: 'cancel'; id: string }
+  | { type: 'unload' };
+
+/** Messages ASR worker → main thread. */
+export type AsrWorkerResponse =
+  | { type: 'load-progress'; loadedBytes: number; totalBytes: number; fileName: string }
+  | { type: 'load-stage'; stage: 'initializing' }
+  | { type: 'load-ready'; backend: 'webgpu' | 'wasm' }
+  | { type: 'load-error'; message: string }
+  | { type: 'chunk-progress'; id: string; chunk: number; totalChunks: number }
+  | { type: 'partial'; id: string; text: string }
+  | { type: 'result'; id: string; text: string; words: TranscriptWord[] }
+  | { type: 'error'; id: string; message: string; canceled?: boolean }
+  | { type: 'unloaded' };

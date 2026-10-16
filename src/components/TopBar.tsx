@@ -1,4 +1,4 @@
-import { Github, Moon, Sun, Download, X } from 'lucide-react';
+import { Github, Moon, Sun, Download, X, AudioLines } from 'lucide-react';
 import { Logo } from './Logo';
 import { formatDuration, formatSavings } from '../utils/media';
 
@@ -20,6 +20,13 @@ interface TopBarProps {
   /** Progress text shown next to the spinner while converting (e.g. "2/3 · 45%"). */
   processingLabel?: string;
   onCancelProcessing?: () => void;
+  /** Convert/transcribe view toggle. */
+  transcribeView?: {
+    active: boolean;
+    /** Number of items in the transcript list, shown as a badge. */
+    count: number;
+    onToggle: () => void;
+  };
 }
 
 export function TopBar({
@@ -31,6 +38,7 @@ export function TopBar({
   isProcessing = false,
   processingLabel,
   onCancelProcessing,
+  transcribeView,
 }: TopBarProps) {
   return (
     <header className="sticky top-0 z-50 h-14 border-b border-line bg-surface-raised/90 backdrop-blur">
@@ -67,6 +75,31 @@ export function TopBar({
         )}
 
         <div className="flex-1" />
+
+        {/* Convert / Transcribe view toggle */}
+        {transcribeView && (
+          <button
+            onClick={transcribeView.onToggle}
+            className={`relative flex items-center gap-1.5 rounded-md border px-2.5 py-1.5 text-[13px] font-medium transition-colors ${
+              transcribeView.active
+                ? 'border-accent bg-accent text-white'
+                : 'border-line text-ink-secondary hover:border-accent/40 hover:text-ink'
+            }`}
+            title="Toggle transcription view"
+          >
+            <AudioLines className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Transcribe</span>
+            {transcribeView.count > 0 && (
+              <span
+                className={`flex h-4 min-w-4 items-center justify-center rounded-full px-1 text-[10px] font-bold ${
+                  transcribeView.active ? 'bg-white/20 text-white' : 'bg-accent/15 text-accent'
+                }`}
+              >
+                {transcribeView.count}
+              </span>
+            )}
+          </button>
+        )}
 
         {/* Processing indicator + cancel */}
         {isProcessing && (

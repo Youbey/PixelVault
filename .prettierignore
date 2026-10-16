@@ -1,0 +1,2 @@
+# Vendored third-party artifacts — never reformat (byte-identity with upstream).
+public/models/
