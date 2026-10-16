@@ -28,7 +28,7 @@ PixelVault is a privacy-first media conversion tool to convert, compress, and op
 | Tailwind CSS | ^4.1.7   |                                              |
 | Mediabunny   | ^1.61.4  | Video conversion engine (WebCodecs, bundled) |
 | Lucide React | ^0.294.0 |                                              |
-| UUID         | ^9.0.1   |                                              |
+| UUID         | ^11.0.0  |                                              |
 
 ## Live Demo
 
@@ -80,8 +80,10 @@ PixelVault/
 ├── .github/workflows/   # ci.yml (PRs) + gh-pages.yml (deploy)
 ├── public/favicon.svg
 ├── src/
-│   ├── components/      # Header, DropZone, SettingsPanel, ComparisonSlider, BatchList
-│   ├── hooks/useImageProcessor.ts
+│   ├── components/      # TopBar, DropZone, Filmstrip, Logo, SettingsPanel,
+│   │                    # VideoSettingsPanel, ComparisonSlider
+│   ├── hooks/           # useImageProcessor, useVideoProcessor
+│   ├── utils/media.ts
 │   ├── App.tsx
 │   ├── main.tsx
 │   ├── index.css
@@ -124,6 +126,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md). Feature requests and bugs via GitHub Iss
 - Phase 1 (done): JPG/PNG/WebP convert, resize/crop, compress.
 - Phase 2a (this release): video convert/compress/scale (MP4/WebM in → MP4/WebM out, MOV/MKV accepted).
 - Phase 2b (next): video/audio trim + audio conversion (WAV/MP3).
+- Phase 2c (planned): in-browser speech-to-text transcription (Phonon-2, English) — one-time consented model download, offline thereafter.
 - Phase 3 (later): PDF merge/split, enhancements.
 
 ## Browser Support
