@@ -5,6 +5,9 @@ import tailwindcss from '@tailwindcss/vite';
 export default defineConfig({
   base: '/PixelVault/',
   plugins: [react(), tailwindcss()],
+  // The ASR worker imports onnxruntime-web's ESM bundle; the default 'iife'
+  // worker format cannot carry ESM dependencies.
+  worker: { format: 'es' },
   build: {
     outDir: 'dist',
   },
