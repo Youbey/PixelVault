@@ -17,7 +17,7 @@ PixelVault is a privacy-first media conversion tool to convert, compress, and op
 - **Batch processing** — convert many files (images and videos mixed), download individually or all.
 - **Video conversion** — GPU-accelerated via WebCodecs (hardware encoders with automatic software fallback), live per-file progress, cancel anytime.
 - **Before/after comparison** — slider preview + savings stats.
-- **Speech-to-text** — transcribe audio/video files or mic recordings entirely in your browser (Whisper tiny.en, English). The ~45 MB model ships with PixelVault itself — no third-party requests, ever; copy or export .txt/.srt with timestamps.
+- **Speech-to-text** — transcribe audio/video files or mic recordings entirely in your browser (Whisper tiny.en, English). The ~45 MB model ships with PixelVault itself — no third-party requests, ever, and it loads automatically when you add media; copy or export .txt/.srt with timestamps.
 
 ## Technology Stack
 

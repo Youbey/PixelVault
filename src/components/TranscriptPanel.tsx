@@ -82,7 +82,8 @@ function ModelCard({
           <p className="text-[12px] leading-relaxed text-ink-secondary">
             Whisper tiny.en (~43 MB) is bundled with PixelVault and loaded from this site — no
             third-party requests. Runs entirely in your browser; your files, recordings, and
-            transcripts never leave your device.
+            transcripts never leave your device. Loads automatically when you add an audio or video
+            file — or load it now to be ready.
           </p>
           <button
             onClick={onLoadModel}
@@ -498,13 +499,23 @@ export function TranscriptPanel({
                     {selected.status === 'pending' && (
                       <div className="flex flex-1 items-center justify-center">
                         <button
-                          onClick={() => onTranscribe(selected.id)}
-                          disabled={!modelReady}
-                          title={!modelReady ? 'Load the model first' : undefined}
+                          onClick={modelReady ? () => onTranscribe(selected.id) : onLoadModel}
+                          disabled={model.status === 'loading'}
+                          title={
+                            model.status === 'loading'
+                              ? 'Loading the speech model…'
+                              : modelReady
+                                ? undefined
+                                : 'Load the speech model first'
+                          }
                           className="flex h-10 items-center gap-2 rounded-md bg-accent px-5 text-[14px] font-semibold text-white shadow-sm transition-all hover:bg-accent-strong active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-50"
                         >
                           <AudioLines className="h-4 w-4" />
-                          {modelReady ? 'Transcribe' : 'Load model to transcribe'}
+                          {modelReady
+                            ? 'Transcribe'
+                            : model.status === 'loading'
+                              ? 'Loading model…'
+                              : 'Load model to transcribe'}
                         </button>
                       </div>
                     )}
