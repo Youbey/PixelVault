@@ -347,6 +347,10 @@ export default function App() {
   }, []);
 
   const handleLoadModel = useCallback(() => {
+    // Idempotent: auto-triggers (file add, record, bridge, pending button)
+    // can race — a second call while loading/ready must be a no-op, never
+    // an "already in progress" error state.
+    if (model.status === 'loading' || model.status === 'ready') return;
     setModel((prev) => ({
       ...prev,
       status: 'loading',
@@ -367,14 +371,17 @@ export default function App() {
           error: undefined,
         }))
       )
-      .catch((err: unknown) =>
+      .catch((err: unknown) => {
+        // Another trigger already owns the load (stale-closure race) — the
+        // first call's .then will set 'ready'; never surface this as an error.
+        if (err instanceof Error && err.message.includes('already in progress')) return;
         setModel((prev) => ({
           ...prev,
           status: 'error',
           error: err instanceof Error ? err.message : String(err),
-        }))
-      );
-  }, [loadModel]);
+        }));
+      });
+  }, [loadModel, model.status]);
 
   const handleUnloadModel = useCallback(() => {
     void unloadModel().then(() =>
@@ -407,8 +414,12 @@ export default function App() {
       if (added.length === 0) return;
       setTranscripts((prev) => [...prev, ...added]);
       setSelectedTranscriptId((prev) => prev ?? added[0].id);
+      // Adding transcribable media (audio or video) to THIS view is an
+      // explicit transcribe intent — warm the model now so it is ready
+      // before the user clicks Transcribe. Convert-view adds never land here.
+      handleLoadModel();
     },
-    [addTranscriptItem]
+    [addTranscriptItem, handleLoadModel]
   );
 
   const handleRecordComplete = useCallback(
@@ -416,8 +427,9 @@ export default function App() {
       const item = addTranscriptItem(file, 'recording');
       setTranscripts((prev) => [...prev, item]);
       setSelectedTranscriptId(item.id);
+      handleLoadModel();
     },
-    [addTranscriptItem]
+    [addTranscriptItem, handleLoadModel]
   );
 
   const recorder = useRecorder(handleRecordComplete);
@@ -559,7 +571,8 @@ export default function App() {
     setSelectedTranscriptId(item.id);
     setView('transcribe');
     if (model.status === 'ready') startTranscribe(item);
-  }, [selectedFile, addTranscriptItem, model.status, startTranscribe]);
+    else handleLoadModel(); // guarded — no-op while loading
+  }, [selectedFile, addTranscriptItem, model.status, startTranscribe, handleLoadModel]);
   const isVideoSelected = selectedFile?.kind === 'video';
   const processedCount = files.filter((f) => f.status === 'done').length;
   const totalOriginalSize = files.reduce((sum, f) => sum + f.originalSize, 0);
